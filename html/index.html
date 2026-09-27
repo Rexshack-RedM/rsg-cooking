@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>rsg-cooking</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="app" class="hidden">
+    <div class="panel">
+        <header class="panel-header">
+            <span class="round-btn ghost"></span>
+            <div class="header-text">
+                <h1 id="title"></h1>
+                <div class="subtitle" id="xp"></div>
+            </div>
+            <button class="round-btn" id="closeBtn" data-lt="ui_close">✕</button>
+        </header>
+        <div class="divider"><span>✦</span></div>
+
+        <nav id="tabs" class="tabs"></nav>
+
+        <div class="body">
+            <section class="recipes" id="recipes"></section>
+
+            <aside class="detail" id="detail">
+                <div class="empty" id="emptyDetail" data-l="ui_select"></div>
+
+                <div id="detailContent" class="hidden">
+                    <div class="detail-top">
+                        <div class="detail-img"><img id="dImg" alt=""></div>
+                        <div>
+                            <div class="detail-name" id="dName"></div>
+                            <div class="detail-meta" id="dMeta"></div>
+                        </div>
+                    </div>
+
+                    <div class="section-label"><span data-l="ui_ingredients"></span> <span class="muted" id="perLabel"></span></div>
+                    <div class="ingredients" id="dIngredients"></div>
+
+                    <div id="controls">
+                        <div class="section-label" data-l="ui_quantity"></div>
+                        <div class="qty-row">
+                            <button class="wood-btn small" id="qMin">«</button>
+                            <button class="wood-btn small" id="qDown">−</button>
+                            <input id="qty" type="number" min="1" value="1">
+                            <button class="wood-btn small" id="qUp">+</button>
+                            <button class="wood-btn small" id="qMax">»</button>
+                        </div>
+                        <div class="summary" id="summary"></div>
+                        <div class="status hidden" id="status"></div>
+                        <button class="wood-btn wide" id="cookBtn"></button>
+                    </div>
+
+                    <div id="progressBox" class="hidden">
+                        <div class="section-label" id="pLabel"></div>
+                        <div class="bar"><div class="bar-fill stat-warn" id="pFill"></div></div>
+                        <div class="progress-info"><span id="pPct">0%</span><span id="pTime">0s</span></div>
+                        <button class="wood-btn wide muted-btn" id="cancelBtn" data-l="ui_stop"></button>
+                    </div>
+                </div>
+            </aside>
+        </div>
+    </div>
+</div>
+<script src="script.js"></script>
+</body>
+</html>
