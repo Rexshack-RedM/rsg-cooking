@@ -72,6 +72,13 @@ lib.callback.register('rsg-cooking:server:getCampfires', function()
     return list
 end)
 
+-- using the campfire item opens the placement gizmo; the item is removed in placeCampfire
+if cfg.RequiredItem then
+    RSGCore.Functions.CreateUseableItem(cfg.RequiredItem, function(source)
+        TriggerClientEvent('rsg-cooking:client:useCampfireItem', source)
+    end)
+end
+
 RegisterNetEvent('rsg-cooking:server:placeCampfire', function(coords, heading)
     local src = source
     local Player = RSGCore.Functions.GetPlayer(src)

@@ -11,7 +11,7 @@ A cooking system for **RSG-Core (RedM)**. Players cook food through a full-scree
 - **Batch cooking**: cook 1 to `Config.MaxBatch` of the same recipe in one go. Ingredients, output, cook time and XP all scale with the quantity.
 - **Progress bar**: shows the percentage and time left, with a Stop Cooking button. The result or any error is shown inside the UI, with no pop-ups while it is open.
 - **Stove cooking**: target any stove prop listed in `Config.CookingProps`.
-- **Player campfires**: `/setupcampfire` places `p_campfirecombined01x` with a placement preview (rotate, place, cancel). Campfires can be targeted for campfire cooking and are saved to the database, so they survive restarts.
+- **Player campfires**: use the `campfire` item (or `/setupcampfire`) to place `p_campfirecombined01x` with a placement preview (rotate, place, cancel). Campfires can be targeted for campfire cooking and are saved to the database, so they survive restarts.
 - **Cooking XP**: required XP per recipe, XP rewards, and optional job-restricted recipes.
 - **Server-side checks**: the server checks every ingredient, the amount, the XP and the job, plus a minimum cook time and campfire distance. The client never decides a reward.
 - **Discord webhooks**: optional logs for cooking, XP milestones and admin alerts for suspicious activity.
@@ -33,7 +33,7 @@ A cooking system for **RSG-Core (RedM)**. Players cook food through a full-scree
 
 1. Put `rsg-cooking` in your `resources` folder.
 2. **Items**: add the entries from `installation/shared_items.lua` to `rsg-core/shared/items.lua`.
-3. **Images**: copy `installation/images/*.png` to `rsg-inventory/html/images/`.
+3. **Images**: copy `installation/images/*.png` to `rsg-inventory/html/images/`, and add a `campfire.png` icon for the Campfire Kit item.
 4. **Database**: run `installation/rsg-cooking.sql`. The table is also created automatically on first start.
 5. Add the resource to your `server.cfg` **after** its dependencies:
    ```cfg
@@ -63,14 +63,14 @@ A cooking system for **RSG-Core (RedM)**. Players cook food through a full-scree
    **Stop Cooking**, **Esc** or closing the window cancels the cook, and you keep your ingredients.
 
 ### Setting up a campfire
-1. Type **`/setupcampfire`**.
+1. Use the **Campfire Kit** (`campfire`) item from your inventory, or type **`/setupcampfire`**.
 2. Look where you want the fire to go. A preview follows your camera and fades out where it can't be placed.
    | Key | Action |
    |---|---|
    | `← / →` | Rotate |
    | `ENTER` | Place |
    | `BACKSPACE` | Cancel |
-3. After a short setup animation, the campfire appears for everyone.
+3. After a short setup animation, the campfire appears for everyone and one `campfire` item is used up. Cancelling or failing to place keeps the item.
 4. Target the fire and choose **Cook at Campfire** to open the cooking UI with campfire recipes.
 5. The owner can target it and choose **Put Out Campfire** to remove it. Fires also burn out after `Config.Campfire.Duration` minutes.
 
@@ -96,7 +96,7 @@ A cooking system for **RSG-Core (RedM)**. Players cook food through a full-scree
 | `MaxPerPlayer` | `1` | Campfires a player can own at once |
 | `SetupTime` | `5000` | Setup animation length (ms) |
 | `Duration` | `30` | Minutes before the fire burns out (`0` = until put out) |
-| `RequiredItem` | `nil` | Item used up when placing, e.g. `'campfire'` (`nil` = free) |
+| `RequiredItem` | `'campfire'` | Usable item that opens placement and is used up once the fire is placed (`nil` = free, command only) |
 
 ### Cooking types (`Config.CookingTypes`)
 | Type | Used by |

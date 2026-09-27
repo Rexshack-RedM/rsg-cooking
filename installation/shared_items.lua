@@ -1,5 +1,6 @@
 
     -- cooking
+    campfire    = { name = 'campfire',     label = 'Campfire Kit',     weight = 500,  type = 'item',  image = 'campfire.png',     unique = false,  useable = true,   shouldClose = true,  description = 'Used to set up a campfire', category = 'cooking' },
     bread_sour  = { name = 'bread_sour',   label = 'Sourdough Bread',  weight = 100,  type = 'item',  image = 'bread_sour.png',   unique = false,  useable = true,   shouldClose = true,  description = 'Oven Fresh',          category = 'cooking' },
     cooked_fish = { name = 'cooked_fish',  label = 'Cooked Fish',      weight = 50,   type = 'item',  image = 'cooked_fish.png',  unique = false,  useable = true,   shouldClose = true,  description = 'ready for eating',    category = 'cooking' },
     cooked_meat = { name = 'cooked_meat',  label = 'Cooked Meat',      weight = 50,   type = 'item',  image = 'cooked_meat.png',  unique = false,  useable = true,   shouldClose = true,  description = 'ready for eating',    category = 'cooking' },

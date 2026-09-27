@@ -180,10 +180,15 @@ local function startPlacement()
     ClearPedTasks(ped)
 end
 
-RegisterCommand(cfg.Command, function()
+local function tryStartPlacement()
     if placing or LocalPlayer.state.inv_busy then return end
     CreateThread(startPlacement)
-end, false)
+end
+
+RegisterCommand(cfg.Command, tryStartPlacement, false)
+
+-- triggered by using the campfire item (item is only consumed server-side once placed)
+RegisterNetEvent('rsg-cooking:client:useCampfireItem', tryStartPlacement)
 
 AddEventHandler('onResourceStop', function(resource)
     if resource ~= GetCurrentResourceName() then return end

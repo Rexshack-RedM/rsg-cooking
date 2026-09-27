@@ -30,7 +30,7 @@ Config.Campfire = {
     MaxPerPlayer  = 1,      -- campfires a player can have at once
     SetupTime     = 5000,   -- ms to build the fire after placing
     Duration      = 30,     -- minutes before the fire burns out (0 = permanent until put out). Saved in the database, survives restarts
-    RequiredItem  = nil,    -- e.g. 'campfire' to consume an item when placing, nil = free
+    RequiredItem  = 'campfire', -- e.g. 'campfire' to consume an item when placing, nil = free
 }
 
 ---------------------------------
