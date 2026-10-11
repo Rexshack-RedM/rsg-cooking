@@ -28,7 +28,7 @@ local function createObject(id)
     local c = campfires[id]
     if not c or c.entity then return end
     if not lib.requestModel(cfg.Model, 5000) then return end
-    if not campfires[id] then return end -- removed while the model loaded
+    if campfires[id] ~= c or not c.inside or c.entity then return end -- removed / out of range while the model loaded
 
     local obj = CreateObject(cfg.Model, c.coords.x, c.coords.y, c.coords.z, false, false, false)
     SetModelAsNoLongerNeeded(cfg.Model)
@@ -71,8 +71,14 @@ local function addCampfire(id, data)
     c.point = lib.points.new({
         coords = data.coords,
         distance = cfg.SpawnDistance,
-        onEnter = function() CreateThread(function() createObject(id) end) end,
-        onExit = function() deleteObject(c) end,
+        onEnter = function()
+            c.inside = true
+            CreateThread(function() createObject(id) end)
+        end,
+        onExit = function()
+            c.inside = false
+            deleteObject(c)
+        end,
     })
 end
 
@@ -181,7 +187,7 @@ local function startPlacement()
 end
 
 local function tryStartPlacement()
-    if placing or LocalPlayer.state.inv_busy then return end
+    if placing or LocalPlayer.state.inv_busy or IsEntityDead(cache.ped) then return end
     CreateThread(startPlacement)
 end
 

@@ -33,7 +33,7 @@ A cooking system for **RSG-Core (RedM)**. Players cook food through a full-scree
 
 1. Put `rsg-cooking` in your `resources` folder.
 2. **Items**: add the entries from `installation/shared_items.lua` to `rsg-core/shared/items.lua`.
-3. **Images**: copy `installation/images/*.png` to `rsg-inventory/html/images/`, and add a `campfire.png` icon for the Campfire Kit item.
+3. **Images**: copy `installation/images/*.png` (includes `campfire.png` for the Campfire Kit) to `rsg-inventory/html/images/`.
 4. **Database**: run `installation/rsg-cooking.sql`. The table is also created automatically on first start.
 5. Add the resource to your `server.cfg` **after** its dependencies:
    ```cfg
@@ -127,6 +127,11 @@ A cooking system for **RSG-Core (RedM)**. Players cook food through a full-scree
 ```
 Every item must exist in `RSGCore.Shared.Items`. Invalid recipes are reported in the server console on start.
 
+### Security notes
+- Rewards are only ever given by the server, after a timed session it opened itself (finishing early is rejected and reported to admin webhooks).
+- Campfire cooking is distance-checked on the server against the saved campfires.
+- Stove props are world objects the server cannot see, so stove distance is checked by ox_target on the client only. A cheater could cook a `stove` recipe away from a stove, but still needs the real ingredients and has to wait the full cook time. Use `cookingtype = 'campfire'` (or an external `campsite`/`cookjob` script with its own checks) for recipes you want location-locked.
+
 ### Webhooks (`shared/webhook_config.lua`)
 Set `WebhookConfig.WebhookURL`, then toggle events in `WebhookConfig.Events` and the details shown in `WebhookConfig.DetailedInfo`. You can also set XP milestone ranks and turn on admin alerts (`AdminNotifications`) for suspicious activity and high XP gains.
 
@@ -154,7 +159,7 @@ exports['rsg-cooking']:ProcessCookingWithJobCheck(src, recipe)
 exports['rsg-cooking']:CheckPlayerIngredients(src, ingredients)
 exports['rsg-cooking']:GetPlayerCookingXP(src)
 exports['rsg-cooking']:GivePlayerCookingXP(src, amount)
-exports['rsg-cooking']:AddCustomRecipe(recipe)                  -- shows in the UI straight away
+exports['rsg-cooking']:AddCustomRecipe(recipe)                  -- shows in the UI straight away (server-side list only; the client recipe exports read the config)
 exports['rsg-cooking']:GetCookingRecipes()
 exports['rsg-cooking']:CanCookItem(itemName)
 exports['rsg-cooking']:CheckPlayerJob(src, job)
@@ -168,3 +173,9 @@ exports['rsg-cooking']:GetRecipesByJob(jobName)
 ## Translations
 
 Locale files live in `locales/*.json` and use ox_lib's `locale()`. To add a language, copy `en.json` to `<code>.json`, translate the values (keep every `%s`) and set `setr ox:locale "<code>"`.
+
+---
+
+## Support
+
+If you find this resource useful, you can support development here: https://buymeacoffee.com/rexshack

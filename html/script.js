@@ -107,7 +107,6 @@ function renderDetail() {
 /* ---------- status line (inline result / error, no pop-ups) ---------- */
 function setStatus(message, ok) {
     const el = $('status');
-    el.classList.toggle('hidden', !message);
     el.className = 'status' + (message ? (ok ? ' ok' : ' bad') : ' hidden');
     el.textContent = message || '';
 }

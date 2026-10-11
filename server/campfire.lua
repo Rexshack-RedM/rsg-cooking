@@ -83,7 +83,7 @@ RegisterNetEvent('rsg-cooking:server:placeCampfire', function(coords, heading)
     local src = source
     local Player = RSGCore.Functions.GetPlayer(src)
     if not loaded or not Player or type(coords) ~= 'vector3' then return end
-    heading = tonumber(heading) or 0.0
+    heading = (tonumber(heading) or 0.0) % 360
 
     -- must be placed close to the player
     local pcoords = GetEntityCoords(GetPlayerPed(src))
