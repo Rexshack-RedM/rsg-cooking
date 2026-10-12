@@ -348,7 +348,7 @@ Config.Cooking = {
         cookingtype = 'stove', -- 'stove', 'campfire', 'campsite', 'cookjob', or 'all'
         ingredients = {
             { item = 'emptybottle', amount = 1 },
-            { item = 'herb_black_berry', amount = 5 },
+            { item = 'blackberry',  amount = 5 },
         },
         receive = 'jelly_blackberry',
         giveamount = 1
@@ -362,7 +362,7 @@ Config.Cooking = {
         cookingtype = 'stove', -- 'stove', 'campfire', 'campsite', 'cookjob', or 'all'
         ingredients = {
             { item = 'emptybottle', amount = 1 },
-            { item = 'herb_red_raspberry', amount = 5 },
+            { item = 'raspberry',   amount = 5 },
         },
         receive = 'jelly_raspberry',
         giveamount = 1
@@ -410,7 +410,7 @@ Config.Cooking = {
         ingredients = {
             { item = 'flour_wheat',         amount = 2 },
             { item = 'sugar',               amount = 1 },
-            { item = 'herb_red_raspberry',  amount = 10 },
+            { item = 'raspberry',           amount = 10 },
             { item = 'egg',                 amount = 1 },
         },
         receive = 'pie_raspberry',
