@@ -1,555 +1,226 @@
 Config = {}
 
 ---------------------------------
--- settings
+-- general
 ---------------------------------
-Config.Image = "rsg-inventory/html/images/"
-Config.MaxBatch = 10 -- max number of the same recipe that can be cooked in one go (cook time scales with quantity)
+Config.InteractDist = 3.0                         -- server side max distance for actions
+Config.SpawnDist    = 120.0                       -- placed campfires only spawn as props within this distance
+Config.MaxBatches   = 10                          -- the pantry holds this many batches worth of each ingredient
+Config.OutputCap    = 100                         -- max items the serving tray can hold before cooking stops
+Config.TickInterval = 15                          -- seconds between server cooking ticks
+Config.ImagePath    = 'nui://rsg-inventory/html/images/'
 
 ---------------------------------
--- cooking props
+-- station types
+-- fuel = true  -> the station has a firebox and only cooks while it has fuel
+-- fuel = false -> always lit, no firebox
 ---------------------------------
-Config.CookingProps = {
-    `p_stove01x`,
-    `p_stove04x`,
-    `p_stove05x`,
-    `p_stove06x`,
-    `p_stove07x`,
-    `p_stove09x`,
+Config.StationTypes = {
+    stove    = { fuel = true },
+    campfire = { fuel = true },
+}
+
+-- stove props already placed around the map: target them to open the cooking UI
+-- private = true  -> every character gets their own pot at each stove (nobody can take your food)
+-- private = false -> one shared pot per stove, like rsg-moonshine world stills
+Config.WorldStations = {
+    enabled  = true,
+    private  = true,
+    distance = 2.0, -- ox_target distance
+    models   = {
+        `p_stove01x`,
+        `p_stove04x`,
+        `p_stove05x`,
+        `p_stove06x`,
+        `p_stove07x`,
+        `p_stove09x`,
+    },
 }
 
 ---------------------------------
--- player campfires (/setupcampfire)
+-- player campfires (campfire item or /setupcampfire)
 ---------------------------------
 Config.Campfire = {
     Command       = 'setupcampfire',
+    Item          = 'campfire',             -- item used to place a campfire (nil = free via command)
+    ReturnItem    = true,                   -- give the item back when the owner puts the fire out
     Model         = `p_campfirecombined01x`,
-    SpawnDistance = 75.0,   -- campfire props are only spawned for players within this range
-    PlaceDistance = 5.0,    -- max distance from the player the campfire can be placed
-    MinSpacing    = 3.0,    -- min distance between two campfires
-    MaxPerPlayer  = 1,      -- campfires a player can have at once
-    SetupTime     = 5000,   -- ms to build the fire after placing
-    Duration      = 30,     -- minutes before the fire burns out (0 = permanent until put out). Saved in the database, survives restarts
-    RequiredItem  = 'campfire', -- e.g. 'campfire' to consume an item when placing, nil = free
+    PlaceDistance = 5.0,                    -- max distance from the player the campfire can be placed
+    MinSpacing    = 3.0,                    -- min distance between two cooking stations
+    MaxPerPlayer  = 1,                      -- campfires a character can have at once
+    SetupTime     = 5000,                   -- ms to build the fire after placing
+    OwnerOnly     = false,                  -- true = only the owner can cook at / collect from their campfire
 }
 
 ---------------------------------
--- cooking types
+-- fuel for the firebox: burnTime = seconds of cooking one item provides
+-- fuel only burns while a batch is cooking; when it runs out the batch pauses
 ---------------------------------
-Config.CookingTypes = {
-    STOVE = 'stove',        -- Cooking at stove props (Config.CookingProps)
-    CAMPFIRE = 'campfire',  -- Player campfires (/setupcampfire)
-    CAMPSITE = 'campsite',  -- Cooking at campsite (external script)
-    COOKJOB = 'cookjob',    -- Job-specific cooking location (uses requiredjob)
-    ALL = 'all'             -- Can cook at any location
+Config.Fuels = {
+    { item = 'resource_wood', burnTime = 300 },
+    { item = 'resource_coal', burnTime = 900 },
+}
+Config.MaxFuel = 3600 -- max seconds of fuel the firebox can hold
+
+-- optional particle effects on a station while it is cooking (offsets relative to the prop)
+Config.CookFx = {
+    enabled = false,
+    dict = 'core',
+    effects = {
+        { name = 'ent_amb_smoke_moon_still', offset = vector3(0.0, 0.0, 1.0), scale = 0.6 },
+    },
 }
 
 ---------------------------------
--- cooking items
+-- cooking xp (stored as RSG rep 'cooking' in player metadata - same rep as before, so existing xp carries over)
 ---------------------------------
-Config.Cooking = {
+Config.XpName    = 'cooking'
+Config.XpPerItem = 1                        -- xp for each item collected (recipes can override with xp)
+-- total xp needed to reach each level (index = level)
+Config.Levels = { 0, 10, 50, 150, 400, 1000 }
+
+---------------------------------
+-- recipes
+-- key         unique id (use the output item name)
+-- category    tab shown in the recipe picker
+-- level       cooking level needed to select it
+-- time        seconds per batch (real time - keeps cooking while you're away and survives restarts)
+-- types       station types it can be cooked at: 'all' or a table e.g. { 'stove', 'campfire' }
+-- job         optional job name / job type required (nil = anyone)
+-- xp          xp per item collected (optional, defaults to Config.XpPerItem)
+---------------------------------
+Config.Recipes = {
+    ------------------------------------------
+    -- snacks
+    ------------------------------------------
+    { key = 'cooked_fish', category = 'Snacks', level = 1, time = 60, types = 'all',
+      ingredients = { { item = 'raw_fish', amount = 1 } },
+      output = { item = 'cooked_fish', amount = 1 } },
+    { key = 'cooked_meat', category = 'Snacks', level = 1, time = 60, types = 'all',
+      ingredients = { { item = 'raw_meat', amount = 1 } },
+      output = { item = 'cooked_meat', amount = 1 } },
+    { key = 'bread_toast', category = 'Snacks', level = 1, time = 60, types = 'all',
+      ingredients = { { item = 'bread_loaf', amount = 1 } },
+      output = { item = 'bread_toast', amount = 5 } },
+    { key = 'toast_apple', category = 'Snacks', level = 1, time = 60, types = 'all',
+      ingredients = { { item = 'bread_toast', amount = 5 }, { item = 'jelly_apple', amount = 1 } },
+      output = { item = 'toast_apple', amount = 5 } },
+    { key = 'jerky_meat', category = 'Snacks', level = 1, time = 90, types = 'all',
+      ingredients = { { item = 'raw_meat', amount = 1 }, { item = 'resource_salt', amount = 5 } },
+      output = { item = 'jerky_meat', amount = 1 } },
+    { key = 'jerky_fish', category = 'Snacks', level = 1, time = 90, types = 'all',
+      ingredients = { { item = 'raw_fish', amount = 1 }, { item = 'resource_salt', amount = 5 } },
+      output = { item = 'jerky_fish', amount = 1 } },
 
     ------------------------------------------
-	-- snack recipes
+    -- meals
     ------------------------------------------
-    {
-        category = 'Snacks',
-        cooktime = 10000,
-        requiredxp = 0,      -- XP required to cook this item
-        xpreward = 1,        -- XP gained after successful cooking
-        requiredjob = nil,   -- nil means no job restriction (anyone can cook)
-        cookingtype = 'all', -- 'stove', 'campfire', 'campsite', 'cookjob', or 'all'
-        ingredients = {
-            { item = 'raw_fish',    amount = 1 },
-        },
-        receive = 'cooked_fish',
-        giveamount = 1
-    },
-    {
-        category = 'Snacks',
-        cooktime = 10000,
-        requiredxp = 0,
-        xpreward = 1,
-        requiredjob = nil,
-        cookingtype = 'all', -- 'stove', 'campfire', 'campsite', 'cookjob', or 'all'
-        ingredients = {
-            { item = 'raw_meat',    amount = 1 },
-        },
-        receive = 'cooked_meat',
-        giveamount = 1
-    },
-    {
-        category = 'Snacks',
-        cooktime = 10000,
-        requiredxp = 0,      -- XP required to cook this item
-        xpreward = 1,        -- XP gained after successful cooking
-        requiredjob = nil,   -- nil means no job restriction (anyone can cook)
-        cookingtype = 'all', -- 'stove', 'campfire', 'campsite', 'cookjob', or 'all'
-        ingredients = {
-            { item = 'bread_loaf',    amount = 1 },
-        },
-        receive = 'bread_toast',
-        giveamount = 5
-    },
-    {
-        category = 'Snacks',
-        cooktime = 10000,
-        requiredxp = 0,      -- XP required to cook this item
-        xpreward = 1,        -- XP gained after successful cooking
-        requiredjob = nil,   -- nil means no job restriction (anyone can cook)
-        cookingtype = 'all', -- 'stove', 'campfire', 'campsite', 'cookjob', or 'all'
-        ingredients = {
-            { item = 'bread_toast',    amount = 5 },
-            { item = 'jelly_apple',    amount = 1 },
+    { key = 'bakedbeans', category = 'Meals', level = 1, time = 60, types = 'all',
+      ingredients = { { item = 'canned_beans', amount = 1 } },
+      output = { item = 'bakedbeans', amount = 1 } },
+    { key = 'stew', category = 'Meals', level = 1, time = 120, types = 'all',
+      ingredients = { { item = 'raw_meat', amount = 1 }, { item = 'potato', amount = 1 }, { item = 'herb_crows_garlic', amount = 1 }, { item = 'water', amount = 1 } },
+      output = { item = 'stew', amount = 1 } },
+    { key = 'stew_fish', category = 'Meals', level = 1, time = 120, types = 'all',
+      ingredients = { { item = 'raw_fish', amount = 1 }, { item = 'potato', amount = 1 }, { item = 'herb_crows_garlic', amount = 1 }, { item = 'water', amount = 1 } },
+      output = { item = 'stew_fish', amount = 1 } },
+    { key = 'stew_veg', category = 'Meals', level = 1, time = 120, types = 'all',
+      ingredients = { { item = 'carrot', amount = 1 }, { item = 'potato', amount = 1 }, { item = 'herb_creeping_thyme', amount = 1 }, { item = 'water', amount = 1 } },
+      output = { item = 'stew_veg', amount = 1 } },
+    { key = 'fish_n_chips', category = 'Meals', level = 1, time = 120, types = 'all',
+      ingredients = { { item = 'raw_fish', amount = 1 }, { item = 'potato', amount = 1 } },
+      output = { item = 'fish_n_chips', amount = 1 } },
 
-        },
-        receive = 'toast_apple',
-        giveamount = 5
-    },
-    {
-        category = 'Snacks',
-        cooktime = 10000,
-        requiredxp = 0,      -- XP required to cook this item
-        xpreward = 1,        -- XP gained after successful cooking
-        requiredjob = nil,   -- nil means no job restriction (anyone can cook)
-        cookingtype = 'all', -- 'stove', 'campfire', 'campsite', 'cookjob', or 'all'
-        ingredients = {
-            { item = 'bread_toast',    amount = 5 },
-            { item = 'jelly_apple',    amount = 1 },
+    ------------------------------------------
+    -- brewing
+    ------------------------------------------
+    { key = 'coffee', category = 'Brewing', level = 1, time = 60, types = 'all',
+      ingredients = { { item = 'coffee_beanspkg', amount = 1 }, { item = 'water', amount = 2 } },
+      output = { item = 'coffee', amount = 2 } },
+    { key = 'tea', category = 'Brewing', level = 1, time = 60, types = 'all',
+      ingredients = { { item = 'teabag', amount = 1 }, { item = 'water', amount = 1 } },
+      output = { item = 'tea', amount = 1 } },
+    { key = 'tea_mint', category = 'Brewing', level = 1, time = 60, types = 'all',
+      ingredients = { { item = 'herb_wild_mint', amount = 1 }, { item = 'water', amount = 1 } },
+      output = { item = 'tea_mint', amount = 1 } },
 
-        },
-        receive = 'toast_apple','emptybottle',
-        giveamount = 5
-    },
-    {
-        category = 'Snacks',
-        cooktime = 10000,
-        requiredxp = 0,
-        xpreward = 1,
-        requiredjob = nil,
-        cookingtype = 'all', -- 'stove', 'campfire', 'campsite', 'cookjob', or 'all'
-        ingredients = {
-            { item = 'raw_meat',            amount = 1 },
-            { item = 'resource_salt',       amount = 5 },
-        },
-        receive = 'jerky_meat',
-        giveamount = 1
-    },
-    {
-        category = 'Snacks',
-        cooktime = 10000,
-        requiredxp = 0,
-        xpreward = 1,
-        requiredjob = nil,
-        cookingtype = 'all', -- 'stove', 'campfire', 'campsite', 'cookjob', or 'all'
-        ingredients = {
-            { item = 'raw_fish',            amount = 1 },
-            { item = 'resource_salt',       amount = 5 },
-        },
-        receive = 'jerky_fish',
-        giveamount = 1
-    },
     ------------------------------------------
-	-- Meal recipes
+    -- bread (stove only - needs an oven)
     ------------------------------------------
-    {
-        category = 'Meals',
-        cooktime = 10000,
-        requiredxp = 0,
-        xpreward = 1,
-        requiredjob = nil,
-        cookingtype = 'all', -- 'stove', 'campfire', 'campsite', 'cookjob', or 'all'
-        ingredients = {
-            { item = 'canned_beans', amount = 1 },
-        },
-        receive = 'bakedbeans',
-        giveamount = 1
-    },
-    {
-        category = 'Meals',
-        cooktime = 10000,
-        requiredxp = 0,
-        xpreward = 1,
-        requiredjob = nil,
-        cookingtype = 'all', -- 'stove', 'campfire', 'campsite', 'cookjob', or 'all'
-        ingredients = {
-            { item = 'raw_meat',            amount = 1 },
-            { item = 'potato',              amount = 1 },
-            { item = 'herb_crows_garlic',   amount = 1 },
-            { item = 'water',               amount = 1 },
-        },
-        receive = 'stew',
-        giveamount = 1
-    },
-    {
-        category = 'Meals',
-        cooktime = 10000,
-        requiredxp = 0,
-        xpreward = 1,
-        requiredjob = nil,
-        cookingtype = 'all', -- 'stove', 'campfire', 'campsite', 'cookjob', or 'all'
-        ingredients = {
-            { item = 'raw_fish',            amount = 1 },
-            { item = 'potato',              amount = 1 },
-            { item = 'herb_crows_garlic',   amount = 1 },
-            { item = 'water',               amount = 1 },
-        },
-        receive = 'stew_fish',
-        giveamount = 1
-    },
-    {
-        category = 'Meals',
-        cooktime = 10000,
-        requiredxp = 0,
-        xpreward = 1,
-        requiredjob = nil,
-        cookingtype = 'all', -- 'stove', 'campfire', 'campsite', 'cookjob', or 'all'
-        ingredients = {
-            { item = 'carrot',              amount = 1 },
-            { item = 'potato',              amount = 1 },
-            { item = 'herb_creeping_thyme', amount = 1 },
-            { item = 'water',               amount = 1 },
-        },
-        receive = 'stew_veg',
-        giveamount = 1
-    },
-    {
-        category = 'Meals',
-        cooktime = 10000,
-        requiredxp = 0,
-        xpreward = 1,
-        requiredjob = nil,
-        cookingtype = 'all', -- 'stove', 'campfire', 'campsite', 'cookjob', or 'all'
-        ingredients = {
-            { item = 'raw_fish',    amount = 1 },
-            { item = 'potato',      amount = 1 },
-        },
-        receive = 'fish_n_chips',
-        giveamount = 1
-    },
-    ------------------------------------------
-	-- Drink recipes
-    ------------------------------------------
-    {
-        category = 'Brewing',
-        cooktime = 10000,
-        requiredxp = 0,
-        xpreward = 1,
-        requiredjob = nil,
-        cookingtype = 'all', -- 'stove', 'campfire', 'campsite', 'cookjob', or 'all'
-        ingredients = {
-            { item = 'coffee_beanspkg', amount = 1 },
-            { item = 'water',        amount = 2 },
-        },
-        receive = 'coffee',
-        giveamount = 2
-    },
-    {
-        category = 'Brewing',
-        cooktime = 10000,
-        requiredxp = 0,
-        xpreward = 1,
-        requiredjob = nil,
-        cookingtype = 'all', -- 'stove', 'campfire', 'campsite', 'cookjob', or 'all'
-        ingredients = {
-            { item = 'teabag', amount = 1 },
-            { item = 'water',  amount = 1 },
-        },
-        receive = 'tea',
-        giveamount = 1
-    },
-    {
-        category = 'Brewing',
-        cooktime = 10000,
-        requiredxp = 0,
-        xpreward = 1,
-        requiredjob = nil,
-        cookingtype = 'all', -- 'stove', 'campfire', 'campsite', 'cookjob', or 'all'
-        ingredients = {
-            { item = 'herb_wild_mint', amount = 1 },
-            { item = 'water',          amount = 1 },
-        },
-        receive = 'tea_mint',
-        giveamount = 1
-    },
-    ------------------------------------------
-	-- bread recipes (stove only - requires oven)
-    ------------------------------------------
-    {
-        category = 'Bread',
-        cooktime = 25000,
-        requiredxp = 10,
-        xpreward = 2,
-        requiredjob = nil,
-        cookingtype = 'stove', -- 'stove', 'campfire', 'campsite', 'cookjob', or 'all'
-        ingredients = {
-            { item = 'flour_wheat', amount = 2 },
-            { item = 'milk',        amount = 1 },
-            { item = 'egg',         amount = 1 },
-        },
-        receive = 'bread',
-        giveamount = 4
-    },
-    {
-        category = 'Bread',
-        cooktime = 25000,
-        requiredxp = 10,
-        xpreward = 2,
-        requiredjob = nil,
-        cookingtype = 'stove', -- 'stove', 'campfire', 'campsite', 'cookjob', or 'all'
-        ingredients = {
-            { item = 'flour_wheat', amount = 2 },
-            { item = 'yeast',       amount = 1 },
-            { item = 'milk',        amount = 1 },
-            { item = 'egg',         amount = 1 },
-        },
-        receive = 'bread_sour',
-        giveamount = 1
-    },
-        {
-        category = 'Bread',
-        cooktime = 25000,
-        requiredxp = 10,
-        xpreward = 2,
-        requiredjob = nil,
-        cookingtype = 'stove', -- 'stove', 'campfire', 'campsite', 'cookjob', or 'all'
-        ingredients = {
-            { item = 'flour_wheat', amount = 2 },
-            { item = 'yeast',       amount = 1 },
-            { item = 'milk',        amount = 1 },
-            { item = 'egg',         amount = 1 },
-        },
-        receive = 'bread_loaf',
-        giveamount = 1
-    },
-    ------------------------------------------
-	-- Canning (stove only - stove)
-    ------------------------------------------
-    {
-        category = 'Canning',
-        cooktime = 25000,
-        requiredxp = 10,
-        xpreward = 2,
-        requiredjob = nil,
-        cookingtype = 'stove', -- 'stove', 'campfire', 'campsite', 'cookjob', or 'all'
-        ingredients = {
-            { item = 'emptybottle', amount = 1 },
-            { item = 'apple',       amount = 2 },
-        },
-        receive = 'jelly_apple',
-        giveamount = 1
-    },
-    {
-        category = 'Canning',
-        cooktime = 25000,
-        requiredxp = 10,
-        xpreward = 2,
-        requiredjob = nil,
-        cookingtype = 'stove', -- 'stove', 'campfire', 'campsite', 'cookjob', or 'all'
-        ingredients = {
-            { item = 'emptybottle', amount = 1 },
-            { item = 'blackberry',  amount = 5 },
-        },
-        receive = 'jelly_blackberry',
-        giveamount = 1
-    },
-    {
-        category = 'Canning',
-        cooktime = 25000,
-        requiredxp = 10,
-        xpreward = 2,
-        requiredjob = nil,
-        cookingtype = 'stove', -- 'stove', 'campfire', 'campsite', 'cookjob', or 'all'
-        ingredients = {
-            { item = 'emptybottle', amount = 1 },
-            { item = 'raspberry',   amount = 5 },
-        },
-        receive = 'jelly_raspberry',
-        giveamount = 1
-    },
-    {
-        category = 'Canning',
-        cooktime = 25000,
-        requiredxp = 10,
-        xpreward = 2,
-        requiredjob = nil,
-        cookingtype = 'stove', -- 'stove', 'campfire', 'campsite', 'cookjob', or 'all'
-        ingredients = {
-            { item = 'emptybottle', amount = 1 },
-            { item = 'orange', amount = 2 },
-        },
-        receive = 'jelly_orange',
-        giveamount = 1
-    },
-    ------------------------------------------
-	-- Desert recipes (stove only - requires oven)
-    ------------------------------------------
-    {
-        category = 'Deserts',
-        cooktime = 25000,
-        requiredxp = 10,
-        xpreward = 2,
-        requiredjob = nil,
-        cookingtype = 'stove', -- 'stove', 'campfire', 'campsite', 'cookjob', or 'all'
-        ingredients = {
-            { item = 'flour_wheat',         amount = 2 },
-            { item = 'sugar',               amount = 1 },
-            { item = 'canned_peaches',      amount = 1 },
-            { item = 'egg',                 amount = 1 },
-        },
-        receive = 'pie_peach',
-        giveamount = 1
-    },
-    {
-        category = 'Deserts',
-        cooktime = 25000,
-        requiredxp = 10,
-        xpreward = 2,
-        requiredjob = nil,
-        cookingtype = 'stove', -- 'stove', 'campfire', 'campsite', 'cookjob', or 'all'
-        ingredients = {
-            { item = 'flour_wheat',         amount = 2 },
-            { item = 'sugar',               amount = 1 },
-            { item = 'raspberry',           amount = 10 },
-            { item = 'egg',                 amount = 1 },
-        },
-        receive = 'pie_raspberry',
-        giveamount = 1
-    },
-    {
-        category = 'Deserts',
-        cooktime = 25000,
-        requiredxp = 10,
-        xpreward = 2,
-        requiredjob = nil,
-        cookingtype = 'stove', -- 'stove', 'campfire', 'campsite', 'cookjob', or 'all'
-        ingredients = {
-            { item = 'flour_wheat',           amount = 2 },
-            { item = 'sugar',                 amount = 1 },
-            { item = 'apple',                 amount = 1 },
-            { item = 'egg',                   amount = 1 },
-        },
-        receive = 'cobbler_apple',
-        giveamount = 1
-    },
-    ------------------------------------------
-	-- Ingredient recipes (stove only - for stove recipes)
-    ------------------------------------------
-    {
-        category = 'Ingredients',
-        cooktime = 25000,
-        requiredxp = 10,
-        xpreward = 2,
-        requiredjob = nil,
-        cookingtype = 'all', -- 'stove', 'campfire', 'campsite', 'cookjob', or 'all'
-        ingredients = {
-            { item = 'coffee_beans', amount = 5 },
-        },
-        receive = 'coffee_beanspkg',
-        giveamount = 1
-    },
-    {
-        category = 'Ingredients',
-        cooktime = 25000,
-        requiredxp = 10,
-        xpreward = 2,
-        requiredjob = nil,
-        cookingtype = 'stove', -- 'stove', 'campfire', 'campsite', 'cookjob', or 'all'
-        ingredients = {
-            { item = 'wheat', amount = 2 },
-        },
-        receive = 'flour_wheat',
-        giveamount = 1
-    },
-    {
-        category = 'Ingredients',
-        cooktime = 25000,
-        requiredxp = 10,
-        xpreward = 2,
-        requiredjob = nil,
-        cookingtype = 'all', -- 'stove', 'campfire', 'campsite', 'cookjob', or 'all'
-        ingredients = {
-            { item = 'resource_salt_rock', amount = 1 },
-        },
-        receive = 'resource_salt',
-        giveamount = 10
-    },
-    {
-        category = 'Ingredients',
-        cooktime = 25000,
-        requiredxp = 10,
-        xpreward = 2,
-        requiredjob = nil,
-        cookingtype = 'stove', -- 'stove', 'campfire', 'campsite', 'cookjob', or 'all'
-        ingredients = {
-            { item = 'sugarcane', amount = 1 },
-        },
-        receive = 'sugar',
-        giveamount = 1
-    },
-    {
-        category = 'Ingredients',
-        cooktime = 25000,
-        requiredxp = 10,
-        xpreward = 2,
-        requiredjob = nil,
-        cookingtype = 'stove', -- 'stove', 'campfire', 'campsite', 'cookjob', or 'all'
-        ingredients = {
-            { item = 'flour_wheat', amount = 2 },
-            { item = 'water',       amount = 1 },
-        },
-        receive = 'yeast',
-        giveamount = 1
-    },
-    ------------------------------------------
-	-- job-specific recipes (cookjob example)
-    ------------------------------------------
-    -- {
-    --     category = 'Professional',
-    --     cooktime = 30000,
-    --     requiredxp = 50,
-    --     xpreward = 10,
-    --     requiredjob = 'cook',  -- Only 'cook' job can make this
-    --     cookingtype = 'cookjob', -- Only at job-specific cooking locations
-    --     ingredients = {
-    --         { item = 'raw_meat',    amount = 2 },
-    --         { item = 'flour_wheat', amount = 1 },
-    --         { item = 'egg',         amount = 2 },
-    --     },
-    --     receive = 'gourmet_meal',
-    --     giveamount = 1
-    -- },
-    ------------------------------------------
-	-- mixed cooking type examples (multiple types)
-    ------------------------------------------
-    -- You can use a table of cooking types instead of a single string
-    -- This allows recipes to be cooked at multiple specific locations
-    -- {
-    --     category = 'Mixed',
-    --     cooktime = 15000,
-    --     requiredxp = 0,
-    --     xpreward = 3,
-    --     requiredjob = nil,
-    --     cookingtype = {'stove', 'campfire'}, -- Can cook at stoves OR campfires (but not campsites)
-    --     ingredients = {
-    --         { item = 'raw_meat', amount = 1 },
-    --     },
-    --     receive = 'cooked_steak',
-    --     giveamount = 1
-    -- },
-    -- {
-    --     category = 'Mixed',
-    --     cooktime = 20000,
-    --     requiredxp = 25,
-    --     xpreward = 5,
-    --     requiredjob = 'cook',
-    --     cookingtype = {'stove', 'cookjob'}, -- Can cook at regular stoves OR job-specific kitchens
-    --     ingredients = {
-    --         { item = 'raw_fish',    amount = 2 },
-    --         { item = 'flour_wheat', amount = 1 },
-    --     },
-    --     receive = 'fish_pie',
-    --     giveamount = 1
-    -- },
+    { key = 'bread', category = 'Bread', level = 2, time = 300, types = { 'stove' }, xp = 2,
+      ingredients = { { item = 'flour_wheat', amount = 2 }, { item = 'milk', amount = 1 }, { item = 'egg', amount = 1 } },
+      output = { item = 'bread', amount = 4 } },
+    { key = 'bread_sour', category = 'Bread', level = 2, time = 300, types = { 'stove' }, xp = 2,
+      ingredients = { { item = 'flour_wheat', amount = 2 }, { item = 'yeast', amount = 1 }, { item = 'milk', amount = 1 }, { item = 'egg', amount = 1 } },
+      output = { item = 'bread_sour', amount = 1 } },
+    { key = 'bread_loaf', category = 'Bread', level = 2, time = 300, types = { 'stove' }, xp = 2,
+      ingredients = { { item = 'flour_wheat', amount = 2 }, { item = 'yeast', amount = 1 }, { item = 'milk', amount = 1 }, { item = 'egg', amount = 1 } },
+      output = { item = 'bread_loaf', amount = 1 } },
 
+    ------------------------------------------
+    -- canning (stove only)
+    ------------------------------------------
+    { key = 'jelly_apple', category = 'Canning', level = 2, time = 180, types = { 'stove' }, xp = 2,
+      ingredients = { { item = 'emptybottle', amount = 1 }, { item = 'apple', amount = 2 } },
+      output = { item = 'jelly_apple', amount = 1 } },
+    { key = 'jelly_blackberry', category = 'Canning', level = 2, time = 180, types = { 'stove' }, xp = 2,
+      ingredients = { { item = 'emptybottle', amount = 1 }, { item = 'blackberry', amount = 5 } },
+      output = { item = 'jelly_blackberry', amount = 1 } },
+    { key = 'jelly_raspberry', category = 'Canning', level = 2, time = 180, types = { 'stove' }, xp = 2,
+      ingredients = { { item = 'emptybottle', amount = 1 }, { item = 'raspberry', amount = 5 } },
+      output = { item = 'jelly_raspberry', amount = 1 } },
+    { key = 'jelly_orange', category = 'Canning', level = 2, time = 180, types = { 'stove' }, xp = 2,
+      ingredients = { { item = 'emptybottle', amount = 1 }, { item = 'orange', amount = 2 } },
+      output = { item = 'jelly_orange', amount = 1 } },
+
+    ------------------------------------------
+    -- desserts (stove only - needs an oven)
+    ------------------------------------------
+    { key = 'pie_peach', category = 'Desserts', level = 2, time = 300, types = { 'stove' }, xp = 2,
+      ingredients = { { item = 'flour_wheat', amount = 2 }, { item = 'sugar', amount = 1 }, { item = 'canned_peaches', amount = 1 }, { item = 'egg', amount = 1 } },
+      output = { item = 'pie_peach', amount = 1 } },
+    { key = 'pie_raspberry', category = 'Desserts', level = 2, time = 300, types = { 'stove' }, xp = 2,
+      ingredients = { { item = 'flour_wheat', amount = 2 }, { item = 'sugar', amount = 1 }, { item = 'raspberry', amount = 10 }, { item = 'egg', amount = 1 } },
+      output = { item = 'pie_raspberry', amount = 1 } },
+    { key = 'cobbler_apple', category = 'Desserts', level = 2, time = 300, types = { 'stove' }, xp = 2,
+      ingredients = { { item = 'flour_wheat', amount = 2 }, { item = 'sugar', amount = 1 }, { item = 'apple', amount = 1 }, { item = 'egg', amount = 1 } },
+      output = { item = 'cobbler_apple', amount = 1 } },
+
+    ------------------------------------------
+    -- ingredients
+    ------------------------------------------
+    { key = 'coffee_beanspkg', category = 'Ingredients', level = 2, time = 120, types = 'all', xp = 2,
+      ingredients = { { item = 'coffee_beans', amount = 5 } },
+      output = { item = 'coffee_beanspkg', amount = 1 } },
+    { key = 'flour_wheat', category = 'Ingredients', level = 2, time = 120, types = { 'stove' }, xp = 2,
+      ingredients = { { item = 'wheat', amount = 2 } },
+      output = { item = 'flour_wheat', amount = 1 } },
+    { key = 'resource_salt', category = 'Ingredients', level = 2, time = 120, types = 'all',
+      ingredients = { { item = 'resource_salt_rock', amount = 1 } },
+      output = { item = 'resource_salt', amount = 10 } },
+    { key = 'sugar', category = 'Ingredients', level = 2, time = 120, types = { 'stove' }, xp = 2,
+      ingredients = { { item = 'sugarcane', amount = 1 } },
+      output = { item = 'sugar', amount = 1 } },
+    { key = 'yeast', category = 'Ingredients', level = 2, time = 120, types = { 'stove' }, xp = 2,
+      ingredients = { { item = 'flour_wheat', amount = 2 }, { item = 'water', amount = 1 } },
+      output = { item = 'yeast', amount = 1 } },
+
+    ------------------------------------------
+    -- job-only example
+    ------------------------------------------
+    -- { key = 'gourmet_meal', category = 'Professional', level = 3, time = 300, types = { 'stove' }, job = 'cook', xp = 5,
+    --   ingredients = { { item = 'raw_meat', amount = 2 }, { item = 'flour_wheat', amount = 1 }, { item = 'egg', amount = 2 } },
+    --   output = { item = 'gourmet_meal', amount = 1 } },
 }
+
+---------------------------------
+-- helpers (shared)
+---------------------------------
+function Config.RecipeAllowed(recipe, stationType)
+    local t = recipe.types or 'all'
+    if type(t) == 'string' then return t == 'all' or t == stationType end
+    for _, v in ipairs(t) do
+        if v == 'all' or v == stationType then return true end
+    end
+    return false
+end

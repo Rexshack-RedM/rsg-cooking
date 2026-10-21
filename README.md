@@ -1,181 +1,87 @@
 # rsg-cooking
 
-A cooking system for **RSG-Core (RedM)**. Players cook food through a full-screen NUI, cook several of the same recipe at once, and can set up their own campfires anywhere in the world.
+A cooking system for **RSG-Core (RedM)** that works the same way as [rsg-moonshine](https://github.com/Rexshack-RedM/rsg-moonshine): cooking stations keep their own pantry, firebox and serving tray, food cooks in real time on the server (even while you're away and across restarts), and everything is run from one NUI.
 
 ---
 
-## Features
+## How it works
 
-- **Cooking UI**: recipes grouped by category tabs, with item images, cook time, XP reward and a lock for recipes that need more XP.
-- **Ingredient images and amounts**: each ingredient shows its picture and `have / need` in green or red. The amounts update with the chosen quantity.
-- **Batch cooking**: cook 1 to `Config.MaxBatch` of the same recipe in one go. Ingredients, output, cook time and XP all scale with the quantity.
-- **Progress bar**: shows the percentage and time left, with a Stop Cooking button. The result or any error is shown inside the UI, with no pop-ups while it is open.
-- **Stove cooking**: target any stove prop listed in `Config.CookingProps`.
-- **Player campfires**: use the `campfire` item (or `/setupcampfire`) to place `p_campfirecombined01x` with a placement preview (rotate, place, cancel). Campfires can be targeted for campfire cooking and are saved to the database, so they survive restarts.
-- **Cooking XP**: required XP per recipe, XP rewards, and optional job-restricted recipes.
-- **Server-side checks**: the server checks every ingredient, the amount, the XP and the job, plus a minimum cook time and campfire distance. The client never decides a reward.
-- **Discord webhooks**: optional logs for cooking, XP milestones and admin alerts for suspicious activity.
-- **Translations**: ox_lib locales in en, de, el, es, fr, ja, nl, pl, pt-br and ro.
+1. **Find a station**: target any stove on the map (**Use Stove**) or set up your own **campfire**.
+2. **Choose a recipe**: recipes are grouped by category tabs. Locked recipes show the cooking level they need.
+3. **Fill the pantry**: load each ingredient (up to `Config.MaxBatches` batches' worth). Unload takes them back.
+4. **Feed the fire**: add `resource_wood` or `resource_coal` to the firebox. Fuel only burns while a batch is cooking; if it runs out, the batch pauses.
+5. **Wait**: a batch starts as soon as the pantry holds a full batch and the fire is lit, then the next one queues automatically.
+6. **Collect**: finished food sits on the serving tray (up to `Config.OutputCap`). Collecting gives the food and **cooking xp** per item.
 
----
+To change recipe, the pantry, current batch and tray must be empty.
 
-## Dependencies
+### Stations
+| Type | Where | Fuel | State |
+|---|---|---|---|
+| `stove` | stove props in `Config.WorldStations.models` | yes | private pot per character at each stove (`Config.WorldStations.private = false` shares one pot like moonshine world stills) |
+| `campfire` | placed with the `campfire` item or `/setupcampfire` | yes | owned by the player who placed it. Only the owner can put it out (it must be empty), and the kit is returned |
 
-- [rsg-core](https://github.com/Rexshack-RedM/rsg-core)
-- [rsg-inventory](https://github.com/Rexshack-RedM/rsg-inventory)
-- [ox_lib](https://github.com/overextended/ox_lib)
-- [ox_target](https://github.com/overextended/ox_target)
-- [oxmysql](https://github.com/overextended/oxmysql)
+Recipes use `types` to choose where they can be cooked (`'all'` or e.g. `{ 'stove' }`) and can be locked to a `job`.
 
 ---
 
 ## Installation
 
 1. Put `rsg-cooking` in your `resources` folder.
-2. **Items**: add the entries from `installation/shared_items.lua` to `rsg-core/shared/items.lua`.
-3. **Images**: copy `installation/images/*.png` (includes `campfire.png` for the Campfire Kit) to `rsg-inventory/html/images/`.
-4. **Database**: run `installation/rsg-cooking.sql`. The table is also created automatically on first start.
-5. Add the resource to your `server.cfg` **after** its dependencies:
-   ```cfg
-   ensure ox_lib
-   ensure oxmysql
-   ensure rsg-core
-   ensure ox_target
-   ensure rsg-inventory
-   ensure rsg-cooking
-   ```
-6. *(Optional)* Set the language:
-   ```cfg
-   setr ox:locale "en"   # en, de, el, es, fr, ja, nl, pl, pt-br, ro
-   ```
-
----
-
-## How to use
-
-### Cooking at a stove
-1. Walk up to a stove and use **ox_target**: **Open Cooking Menu**.
-2. Pick a category tab and click a recipe.
-3. Check the ingredients panel. Green means you have enough, red means you don't.
-4. Set the quantity with `−` / `+`, `«` (min) / `»` (max) or by typing a number.
-5. Press **Cook x N**. The progress bar fills and your character plays the cooking animation.
-6. When it's done, the food goes into your inventory and the result shows in the panel.
-   **Stop Cooking**, **Esc** or closing the window cancels the cook, and you keep your ingredients.
-
-### Setting up a campfire
-1. Use the **Campfire Kit** (`campfire`) item from your inventory, or type **`/setupcampfire`**.
-2. Look where you want the fire to go. A preview follows your camera and fades out where it can't be placed.
-   | Key | Action |
-   |---|---|
-   | `← / →` | Rotate |
-   | `ENTER` | Place |
-   | `BACKSPACE` | Cancel |
-3. After a short setup animation, the campfire appears for everyone and one `campfire` item is used up. Cancelling or failing to place keeps the item.
-4. Target the fire and choose **Cook at Campfire** to open the cooking UI with campfire recipes.
-5. The owner can target it and choose **Put Out Campfire** to remove it. Fires also burn out after `Config.Campfire.Duration` minutes.
+2. Items: add `installation/shared_items.lua` to `rsg-core/shared/items.lua` and copy `installation/images/*.png` to `rsg-inventory/html/images/`.
+3. Database: the `rsg_cooking_stations` table is created automatically (or run `installation/rsg-cooking.sql`). The old `rsg_cooking_campfires` table is no longer used.
+4. `ensure rsg-cooking` after ox_lib, oxmysql, rsg-core, ox_target and rsg-inventory.
+5. Webhooks live in `server/sv_config.lua` (server only, the URLs are never sent to clients).
 
 ---
 
 ## Configuration (`shared/config.lua`)
 
-### General
-| Option | Default | Description |
-|---|---|---|
-| `Config.Image` | `rsg-inventory/html/images/` | Where item images are loaded from |
-| `Config.MaxBatch` | `10` | Max quantity of one recipe per cook |
-| `Config.CookingProps` | stove models | Props that open stove cooking via ox_target |
-
-### Campfires (`Config.Campfire`)
-| Option | Default | Description |
-|---|---|---|
-| `Command` | `setupcampfire` | Command name |
-| `Model` | `p_campfirecombined01x` | Campfire prop |
-| `SpawnDistance` | `75.0` | Props only spawn for players within this range |
-| `PlaceDistance` | `5.0` | Max distance from the player when placing |
-| `MinSpacing` | `3.0` | Min distance between two campfires |
-| `MaxPerPlayer` | `1` | Campfires a player can own at once |
-| `SetupTime` | `5000` | Setup animation length (ms) |
-| `Duration` | `30` | Minutes before the fire burns out (`0` = until put out) |
-| `RequiredItem` | `'campfire'` | Usable item that opens placement and is used up once the fire is placed (`nil` = free, command only) |
-
-### Cooking types (`Config.CookingTypes`)
-| Type | Used by |
+| Option | Description |
 |---|---|
-| `stove` | Stove props |
-| `campfire` | Player campfires |
-| `campsite` | External scripts |
-| `cookjob` | Job kitchens (external scripts) |
-| `all` | Recipe can be cooked at every type |
-
-### Recipes (`Config.Cooking`)
-```lua
-{
-    category    = 'Bread',          -- tab name in the UI
-    cooktime    = 25000,            -- ms for ONE item (multiplied by quantity)
-    requiredxp  = 0,                -- cooking XP needed to unlock
-    xpreward    = 2,                -- XP per item cooked
-    requiredjob = nil,              -- job name/type, or nil for everyone
-    cookingtype = 'stove',          -- a type above, or a list: { 'stove', 'campfire' }
-    ingredients = {
-        { item = 'flour_wheat', amount = 2 },
-        { item = 'milk',        amount = 1 },
-        { item = 'egg',         amount = 1 },
-    },
-    receive     = 'bread_sour',     -- item given
-    giveamount  = 2,                -- amount given per cook
-},
-```
-Every item must exist in `RSGCore.Shared.Items`. Invalid recipes are reported in the server console on start.
-
-### Security notes
-- Rewards are only ever given by the server, after a timed session it opened itself (finishing early is rejected and reported to admin webhooks).
-- Campfire cooking is distance-checked on the server against the saved campfires.
-- Stove props are world objects the server cannot see, so stove distance is checked by ox_target on the client only. A cheater could cook a `stove` recipe away from a stove, but still needs the real ingredients and has to wait the full cook time. Use `cookingtype = 'campfire'` (or an external `campsite`/`cookjob` script with its own checks) for recipes you want location-locked.
-
-### Webhooks (`shared/webhook_config.lua`)
-Set `WebhookConfig.WebhookURL`, then toggle events in `WebhookConfig.Events` and the details shown in `WebhookConfig.DetailedInfo`. You can also set XP milestone ranks and turn on admin alerts (`AdminNotifications`) for suspicious activity and high XP gains.
+| `Config.MaxBatches` | batches' worth of each ingredient the pantry holds |
+| `Config.OutputCap` | max items on the serving tray |
+| `Config.StationTypes` | which station types need fuel |
+| `Config.WorldStations` | stove models, target distance, private or shared pots |
+| `Config.Campfire` | item, model, max per player, spacing, owner-only |
+| `Config.Fuels` / `Config.MaxFuel` | fuel items, seconds each burns, firebox size |
+| `Config.Levels` / `Config.XpPerItem` | cooking levels (rep `cooking`, existing xp carries over) |
+| `Config.Recipes` | `key, category, level, time (seconds per batch), types, job, xp, ingredients, output` |
 
 ---
 
-## Developer API
+## Exports
 
-### Client
+**Client**
 ```lua
--- open the cooking UI for a cooking type
-exports['rsg-cooking']:OpenCookingMenu('campsite')
-TriggerEvent('rsg-cooking:client:cookingmenu', { cookingType = 'campsite' })
-
 exports['rsg-cooking']:GetCookingRecipes(category?)
-exports['rsg-cooking']:GetCookingCategories()
-exports['rsg-cooking']:GetRecipeByItem(itemName)
-exports['rsg-cooking']:GetRecipeIngredients(itemName)
-exports['rsg-cooking']:GetRecipesByCookingType(cookingType?)
+exports['rsg-cooking']:GetRecipesByCookingType(stype)
 ```
 
-### Server
+**Server**
 ```lua
-exports['rsg-cooking']:ProcessCooking(src, recipe)              -- cook a recipe table directly
-exports['rsg-cooking']:ProcessCookingWithJobCheck(src, recipe)
-exports['rsg-cooking']:CheckPlayerIngredients(src, ingredients)
 exports['rsg-cooking']:GetPlayerCookingXP(src)
+exports['rsg-cooking']:GetPlayerCookingLevel(src)
 exports['rsg-cooking']:GivePlayerCookingXP(src, amount)
-exports['rsg-cooking']:AddCustomRecipe(recipe)                  -- shows in the UI straight away (server-side list only; the client recipe exports read the config)
 exports['rsg-cooking']:GetCookingRecipes()
 exports['rsg-cooking']:CanCookItem(itemName)
-exports['rsg-cooking']:CheckPlayerJob(src, job)
-exports['rsg-cooking']:GetPlayerJob(src)
-exports['rsg-cooking']:GetRecipeJobRequirement(itemName)
-exports['rsg-cooking']:GetRecipesByJob(jobName)
+exports['rsg-cooking']:AddCustomRecipe({ key = 'x', category = 'Meals', level = 1, time = 60, types = 'all',
+    ingredients = { { item = 'raw_meat', amount = 1 } }, output = { item = 'x', amount = 1 } })
 ```
 
 ---
 
-## Translations
+## Security notes
+- All items, fuel, xp and food are handled on the server: the client only sends which action it wants, and the server checks distance, ownership, level, job, amounts and inventory space every time.
+- Stove props are map objects the server can't see, so a modded client could open a "stove" pot anywhere. To limit this, each character keeps at most **one unused pot**, and unused pots are deleted on restart.
 
-Locale files live in `locales/*.json` and use ox_lib's `locale()`. To add a language, copy `en.json` to `<code>.json`, translate the values (keep every `%s`) and set `setr ox:locale "<code>"`.
+---
+
+## Commands
+- `/setupcampfire` place a campfire (needs the `campfire` item when one is configured; the item and campfire limit are checked before the preview opens)
+- `/cooking_unfocus` releases the mouse if the UI ever gets stuck
 
 ---
 
 ## Support
-
-If you find this resource useful, you can support development here: https://buymeacoffee.com/rexshack
+If you enjoy this script, consider supporting development: https://buymeacoffee.com/rexshack

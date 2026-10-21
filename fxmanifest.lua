@@ -4,25 +4,22 @@ game 'rdr3'
 lua54 'yes'
 
 description 'rsg-cooking'
-version '3.0.0'
+version '3.1.0'
 
 shared_scripts {
     '@ox_lib/init.lua',
     'shared/config.lua',
-    'shared/webhook_config.lua',
-    'shared/utils.lua',
 }
 
 client_scripts {
     'client/client.lua',
-    'client/campfire.lua',
 }
 
 server_scripts {
     '@oxmysql/lib/MySQL.lua',
+    'server/sv_config.lua',
     'server/webhooks.lua',
     'server/server.lua',
-    'server/campfire.lua',
     'server/versionchecker.lua',
 }
 

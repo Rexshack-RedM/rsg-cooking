@@ -12,57 +12,93 @@
 <div id="app" class="hidden">
     <div class="panel">
         <header class="panel-header">
-            <span class="round-btn ghost"></span>
-            <div class="header-text">
-                <h1 id="title"></h1>
-                <div class="subtitle" id="xp"></div>
+            <button class="circle-btn" id="btn-back" data-t-title="ui_change_recipe" title="Change recipe">&#8249;</button>
+            <div class="titles">
+                <h1 id="title">Stove</h1>
+                <div class="subtitle" data-t="ui_subtitle">Frontier Kitchen</div>
             </div>
-            <button class="round-btn" id="closeBtn" data-lt="ui_close">✕</button>
+            <button class="circle-btn" id="btn-close" data-t-title="ui_close" title="Close">&#10005;</button>
         </header>
-        <div class="divider"><span>✦</span></div>
 
-        <nav id="tabs" class="tabs"></nav>
+        <div class="xp-bar">
+            <span class="xp-label"><span data-t="ui_level">Cooking Level</span> <b id="xp-level">1</b></span>
+            <div class="track"><div class="fill stat-warn" id="xp-fill" style="width:0%"></div></div>
+            <span class="xp-text" id="xp-text">0 / 100</span>
+        </div>
 
-        <div class="body">
-            <section class="recipes" id="recipes"></section>
+        <div class="locked hidden" id="locked" data-t="ui_locked">Only the owner can cook here</div>
 
-            <aside class="detail" id="detail">
-                <div class="empty" id="emptyDetail" data-l="ui_select"></div>
+        <div class="columns">
+            <!-- LEFT: recipe + hopper -->
+            <section class="col col-left">
+                <div class="divider"><span data-t="ui_recipe">Recipe</span></div>
 
-                <div id="detailContent" class="hidden">
-                    <div class="detail-top">
-                        <div class="detail-img"><img id="dImg" alt=""></div>
-                        <div>
-                            <div class="detail-name" id="dName"></div>
-                            <div class="detail-meta" id="dMeta"></div>
+                <div id="recipe-picker">
+                    <div class="hint" data-t="ui_choose_recipe">Choose a recipe</div>
+                    <div id="cat-tabs" class="cat-tabs"></div>
+                    <div id="recipe-list" class="list"></div>
+                </div>
+
+                <div id="recipe-active" class="hidden">
+                    <div class="row recipe-summary">
+                        <div class="badge-icon"><img id="ra-img" alt=""></div>
+                        <div class="row-main">
+                            <div class="row-title" id="ra-label"></div>
+                            <div class="row-desc" id="ra-desc"></div>
                         </div>
+                        <button class="wood-btn muted small" id="btn-change" data-t="ui_change_recipe">Change Recipe</button>
                     </div>
 
-                    <div class="section-label"><span data-l="ui_ingredients"></span> <span class="muted" id="perLabel"></span></div>
-                    <div class="ingredients" id="dIngredients"></div>
+                    <div class="divider"><span data-t="ui_hopper">Pantry</span></div>
+                    <div id="hopper" class="list"></div>
+                </div>
+            </section>
 
-                    <div id="controls">
-                        <div class="section-label" data-l="ui_quantity"></div>
-                        <div class="qty-row">
-                            <button class="wood-btn small" id="qMin">«</button>
-                            <button class="wood-btn small" id="qDown">−</button>
-                            <input id="qty" type="number" min="1" value="1">
-                            <button class="wood-btn small" id="qUp">+</button>
-                            <button class="wood-btn small" id="qMax">»</button>
-                        </div>
-                        <div class="summary" id="summary"></div>
-                        <div class="status hidden" id="status"></div>
-                        <button class="wood-btn wide" id="cookBtn"></button>
+            <!-- RIGHT: status + output -->
+            <section class="col col-right">
+                <div class="divider"><span data-t="ui_status">Cooking Status</span></div>
+
+                <div class="status-card">
+                    <div class="still-art" id="still-art">
+                        <div class="flame"></div><div class="flame f2"></div><div class="flame f3"></div>
                     </div>
+                    <div class="pill" id="status-pill">—</div>
 
-                    <div id="progressBox" class="hidden">
-                        <div class="section-label" id="pLabel"></div>
-                        <div class="bar"><div class="bar-fill stat-warn" id="pFill"></div></div>
-                        <div class="progress-info"><span id="pPct">0%</span><span id="pTime">0s</span></div>
-                        <button class="wood-btn wide muted-btn" id="cancelBtn" data-l="ui_stop"></button>
+                    <div class="stat">
+                        <div class="stat-head"><span data-t="ui_current_batch">Current batch</span><span id="batch-time">--:--</span></div>
+                        <div class="track"><div class="fill stat-warn" id="batch-fill" style="width:0%"></div></div>
+                    </div>
+                    <div class="kv"><span data-t="ui_queued">Batches queued</span><b id="queued">0</b></div>
+                </div>
+
+                <div class="divider" id="fire-divider"><span data-t="ui_firebox">Firebox</span></div>
+
+                <div class="status-card fire-card" id="fire-card">
+                    <div class="stat">
+                        <div class="stat-head"><span data-t="ui_fuel_left">Fuel remaining</span><span id="fuel-time">00:00</span></div>
+                        <div class="track big"><div class="fill stat-good" id="fuel-fill" style="width:0%"></div></div>
+                    </div>
+                    <div id="fuel-list" class="list fuel-list"></div>
+                </div>
+
+                <div class="divider"><span data-t="ui_tank">Serving Tray</span></div>
+
+                <div class="row tank-row">
+                    <div class="badge-icon"><img id="out-img" alt=""></div>
+                    <div class="row-main">
+                        <div class="row-title" id="out-label">—</div>
+                        <div class="track big"><div class="fill stat-good" id="tank-fill" style="width:0%"></div></div>
+                        <div class="meta tank-meta">
+                            <span id="tank-text">0 / 0</span>
+                        </div>
                     </div>
                 </div>
-            </aside>
+
+                <div class="actions">
+                    <button class="wood-btn" id="btn-collect" data-t="ui_collect">Collect</button>
+                    <button class="wood-btn muted" id="btn-pickup" data-t="ui_pickup">Put Out Campfire</button>
+                </div>
+            </section>
         </div>
     </div>
 </div>
