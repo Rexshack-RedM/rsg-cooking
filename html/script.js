@@ -155,7 +155,7 @@ function renderActive(recipe, editable) {
             <div class="controls">
                 <div class="qty">
                     <button data-d="-1">−</button>
-                    <input type="number" min="0" max="${maxLoad}" value="${qty}" data-item="${ing.item}">
+                    <input type="number" min="0" max="${maxLoad}" value="${qty}" data-item="${esc(ing.item)}">
                     <button data-d="1">+</button>
                 </div>
                 <button class="wood-btn small muted" data-max>${t('ui_load_all')}</button>
@@ -256,7 +256,7 @@ function renderFuel() {
             </div>
             <div class="qty">
                 <button data-d="-1">−</button>
-                <input type="number" min="0" max="${maxLoad}" value="${qty}" data-item="${key}">
+                <input type="number" min="0" max="${maxLoad}" value="${qty}" data-item="${esc(key)}">
                 <button data-d="1">+</button>
             </div>
             <button class="wood-btn small muted" data-max>${t('ui_load_all')}</button>
@@ -283,7 +283,7 @@ function tickFuel() {
     const pct = state && state.maxFuel ? Math.min(100, (secs / state.maxFuel) * 100) : 0;
     const fill = $('fuel-fill');
     fill.style.width = pct + '%';
-    fill.className = 'fill ' + (secs <= 0 ? 'stat-bad' : pct < 15 ? 'stat-bad' : pct < 40 ? 'stat-warn' : 'stat-good');
+    fill.className = 'fill ' + (pct < 15 ? 'stat-bad' : pct < 40 ? 'stat-warn' : 'stat-good');
 }
 
 function tickBatch() {

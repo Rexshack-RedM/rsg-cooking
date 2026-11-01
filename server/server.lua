@@ -1,5 +1,4 @@
 local RSGCore = exports['rsg-core']:GetCoreObject()
-lib.locale()
 
 -- [id] = { id, citizenid, world, stype, coords, heading, recipe, hopper = {item=count}, output, fuel, batch_left, last_tick }
 local Stations = {}
@@ -16,7 +15,7 @@ local Inv = exports['rsg-inventory']
 -- helpers
 ---------------------------------
 local function notify(src, desc, ntype)
-    TriggerClientEvent('ox_lib:notify', src, { title = locale('notify_title'), description = desc, type = ntype or 'inform', duration = 5000 })
+    TriggerClientEvent('RSGCore:Client:Notify', src, { title = locale('notify_title'), description = desc, type = ntype or 'inform', duration = 5000 })
 end
 
 local function needsFuel(s)
@@ -63,7 +62,7 @@ local function isNear(src, coords, dist)
 end
 
 -- per-player throttles: throttled('action', src, 300) is true if called again within 300ms
-local Throttle = { action = {}, state = {}, world = {} }
+local Throttle = { action = {}, state = {}, world = {}, place = {} }
 local function throttled(bucket, src, ms)
     local now, last = GetGameTimer(), Throttle[bucket][src]
     if last and now - last < ms then return true end
@@ -330,16 +329,16 @@ AddEventHandler('onResourceStop', function(res)
     for _, s in pairs(Stations) do processStation(s, now) saveStation(s) end
 end)
 
-lib.callback.register('rsg-cooking:server:getStations', function()
+RSGCore.Functions.CreateCallback('rsg-cooking:server:getStations', function(_, cb)
     local list = {}
     for _, s in pairs(Stations) do list[#list + 1] = publicStation(s) end
-    return list
+    cb(list)
 end)
 
-lib.callback.register('rsg-cooking:server:getState', function(src, id)
+RSGCore.Functions.CreateCallback('rsg-cooking:server:getState', function(src, cb, id)
     local s = Stations[id]
-    if not s or throttled('state', src, 250) or not isNear(src, s.coords) then return nil end
-    return buildState(src, s)
+    if not s or throttled('state', src, 250) or not isNear(src, s.coords) then return cb(nil) end
+    cb(buildState(src, s))
 end)
 
 ---------------------------------
@@ -353,7 +352,7 @@ Actions.selectRecipe = function(src, Player, s, data)
     if not canUse(Player, s) then return notify(src, locale('sv_not_owner'), 'error') end
     if s.recipe == r.key then return end
     if not hasJob(Player, r.job) then return notify(src, locale('sv_job'), 'error') end
-    if getLevel(getXp(Player)) < (r.level or 1) then return notify(src, locale('sv_level_low'):format(r.level or 1), 'error') end
+    if getLevel(getXp(Player)) < (r.level or 1) then return notify(src, locale('sv_level_low', r.level or 1), 'error') end
     if not isEmpty(s) then return notify(src, locale('sv_empty_first'), 'error') end
     s.recipe = r.key
     saveStation(s)
@@ -375,12 +374,11 @@ Actions.load = function(src, Player, s, data)
     if amount <= 0 then return notify(src, locale(space <= 0 and 'sv_hopper_full' or 'sv_missing'), 'error') end
 
     if not Inv:RemoveItem(src, ing.item, amount, nil, 'cooking-load') then return end
-    TriggerClientEvent('rsg-inventory:client:ItemBox', src, RSGCore.Shared.Items[ing.item], 'remove', amount)
     s.hopper[ing.item] = (s.hopper[ing.item] or 0) + amount
     processStation(s, os.time())
     saveStation(s)
     local label = itemInfo(ing.item)
-    notify(src, locale('sv_loaded'):format(amount, label), 'success')
+    notify(src, locale('sv_loaded', amount, label), 'success')
     WebhookLog('load', src, 'Ingredients Loaded', ('%sx %s loaded into station #%s'):format(amount, label, s.id), { { 'Station', s.id } })
 end
 
@@ -394,12 +392,11 @@ Actions.loadFuel = function(src, Player, s, data)
     local amount = math.min(math.floor(tonumber(data.amount) or 0), room, have)
     if amount <= 0 then return notify(src, locale(room <= 0 and 'sv_fuel_full' or 'sv_missing'), 'error') end
     if not Inv:RemoveItem(src, f.item, amount, nil, 'cooking-fuel') then return end
-    TriggerClientEvent('rsg-inventory:client:ItemBox', src, RSGCore.Shared.Items[f.item], 'remove', amount)
     s.fuel = s.fuel + amount * f.burnTime
     processStation(s, os.time())
     saveStation(s)
     local label = itemInfo(f.item)
-    notify(src, locale('sv_fuel_loaded'):format(amount, label), 'success')
+    notify(src, locale('sv_fuel_loaded', amount, label), 'success')
     WebhookLog('fuel', src, 'Fuel Added', ('%sx %s added to station #%s'):format(amount, label, s.id), { { 'Station', s.id } })
 end
 
@@ -414,9 +411,8 @@ Actions.unload = function(src, Player, s, data)
     end
     s.hopper[data.item] = nil
     saveStation(s)
-    TriggerClientEvent('rsg-inventory:client:ItemBox', src, RSGCore.Shared.Items[data.item], 'add', amount)
     local label = itemInfo(data.item)
-    notify(src, locale('sv_unloaded'):format(amount, label), 'success')
+    notify(src, locale('sv_unloaded', amount, label), 'success')
     WebhookLog('unload', src, 'Pantry Unloaded', ('%sx %s taken from station #%s'):format(amount, label, s.id), { { 'Station', s.id } })
 end
 
@@ -437,13 +433,12 @@ Actions.collect = function(src, Player, s)
     end
     if amount <= 0 then return notify(src, locale('sv_no_space'), 'error') end
     if not Inv:AddItem(src, r.output.item, amount, nil, nil, 'cooking-collect') then return notify(src, locale('sv_no_space'), 'error') end
-    TriggerClientEvent('rsg-inventory:client:ItemBox', src, RSGCore.Shared.Items[r.output.item], 'add', amount)
 
     s.output = s.output - amount
     processStation(s, os.time()) -- tray had room freed, may start the next batch
     saveStation(s)
     local label = itemInfo(r.output.item)
-    notify(src, locale('sv_collected'):format(amount, label), 'success')
+    notify(src, locale('sv_collected', amount, label), 'success')
     WebhookLog('collect', src, 'Food Collected', ('%sx %s collected from station #%s'):format(amount, label, s.id),
         { { 'Station', s.id }, { 'Type', s.stype }, { 'Left on tray', s.output }, CoordsField(s.coords) })
 
@@ -453,10 +448,10 @@ Actions.collect = function(src, Player, s)
         Player.Functions.AddRep(Config.XpName, xp)
         local after = getLevel(getXp(Player))
         if after > before then
-            notify(src, locale('sv_level_up'):format(after), 'success')
+            notify(src, locale('sv_level_up', after), 'success')
             WebhookLog('levelup', src, 'Cooking Level Up', ('Reached cooking level **%s**'):format(after), { { 'Total XP', getXp(Player) } })
         else
-            notify(src, locale('sv_xp_gain'):format(xp), 'inform')
+            notify(src, locale('sv_xp_gain', xp), 'inform')
         end
     end
 end
@@ -478,33 +473,32 @@ Actions.pickup = function(src, Player, s)
     TriggerClientEvent('rsg-cooking:client:removeStation', -1, s.id)
     if item then
         Inv:AddItem(src, item, 1, nil, nil, 'cooking-campfire-pickup')
-        TriggerClientEvent('rsg-inventory:client:ItemBox', src, RSGCore.Shared.Items[item], 'add', 1)
     end
     notify(src, locale('sv_put_out'), 'success')
     WebhookLog('campfire', src, 'Campfire Put Out', ('Campfire #%s put out by its owner'):format(s.id), { CoordsField(s.coords) })
     return 'closed'
 end
 
-lib.callback.register('rsg-cooking:server:action', function(src, id, action, data)
+RSGCore.Functions.CreateCallback('rsg-cooking:server:action', function(src, cb, id, action, data)
     local Player = RSGCore.Functions.GetPlayer(src)
     local s = Stations[id]
-    if not Player or not s or type(action) ~= 'string' or not Actions[action] then return nil end
+    if not Player or not s or type(action) ~= 'string' or not Actions[action] then return cb(nil) end
     if not isNear(src, s.coords) then
         notify(src, locale('sv_too_far'), 'error')
         WebhookLog('suspicious', src, 'Out of Range Action', ('Tried `%s` on station #%s while not near it'):format(action, s.id), { CoordsField(s.coords) })
-        return nil
+        return cb(nil)
     end
-    if throttled('action', src, 300) then return buildState(src, s) end
+    if throttled('action', src, 300) then return cb(buildState(src, s)) end
     processStation(s, os.time())
-    if Actions[action](src, Player, s, type(data) == 'table' and data or {}) == 'closed' then return nil end
-    return buildState(src, s)
+    if Actions[action](src, Player, s, type(data) == 'table' and data or {}) == 'closed' then return cb(nil) end
+    cb(buildState(src, s))
 end)
 
 ---------------------------------
 -- world stations (stove props + external scripts) - find or create the saved pot
 ---------------------------------
 local creatingWorld = {}
-lib.callback.register('rsg-cooking:server:getWorldStation', function(src, coords, stype)
+local function getWorldStation(src, coords, stype)
     local Player = RSGCore.Functions.GetPlayer(src)
     if not Player or type(coords) ~= 'vector3' or type(stype) ~= 'string' or not Config.StationTypes[stype] then return nil end
     if stype ~= 'stove' or not Config.WorldStations.enabled then return nil end -- campfires are placed, never created this way
@@ -534,6 +528,10 @@ lib.callback.register('rsg-cooking:server:getWorldStation', function(src, coords
     Stations[id] = { id = id, citizenid = owner, world = true, stype = stype, coords = coords, heading = 0.0, hopper = {}, output = 0, fuel = 0, last_tick = os.time() }
     TriggerClientEvent('rsg-cooking:client:syncStation', -1, publicStation(Stations[id]))
     return publicStation(Stations[id])
+end
+
+RSGCore.Functions.CreateCallback('rsg-cooking:server:getWorldStation', function(src, cb, coords, stype)
+    cb(getWorldStation(src, coords, stype))
 end)
 
 ---------------------------------
@@ -545,11 +543,11 @@ local placing = {}
 canPlaceCampfire = function(src, Player)
     local cfg = Config.Campfire
     if countCampfires(Player.PlayerData.citizenid) >= cfg.MaxPerPlayer then
-        notify(src, locale('campfire_limit'):format(cfg.MaxPerPlayer), 'error')
+        notify(src, locale('campfire_limit', cfg.MaxPerPlayer), 'error')
         return false
     end
     if cfg.Item and (Inv:GetItemCount(src, cfg.Item) or 0) < 1 then
-        notify(src, locale('campfire_need_item'):format((itemInfo(cfg.Item))), 'error')
+        notify(src, locale('campfire_need_item', (itemInfo(cfg.Item))), 'error')
         return false
     end
     return true
@@ -569,20 +567,19 @@ RegisterNetEvent('rsg-cooking:server:placeCampfire', function(coords, heading)
     heading = heading % 360.0
     local cfg = Config.Campfire
     local cid = Player.PlayerData.citizenid
-    if placing[cid] then return end
+    if placing[cid] or throttled('place', src, 2000) then return end
 
     if not isNear(src, coords, cfg.PlaceDistance + 2.0) then
         WebhookLog('suspicious', src, 'Remote Placement', 'Tried to place a campfire away from their position', { CoordsField(coords) })
         return notify(src, locale('sv_too_far'), 'error')
     end
-    if countCampfires(cid) >= cfg.MaxPerPlayer then return notify(src, locale('campfire_limit'):format(cfg.MaxPerPlayer), 'error') end
+    if countCampfires(cid) >= cfg.MaxPerPlayer then return notify(src, locale('campfire_limit', cfg.MaxPerPlayer), 'error') end
     for _, s in pairs(Stations) do
         if #(coords - s.coords) < cfg.MinSpacing then return notify(src, locale('campfire_too_close'), 'error') end
     end
     if cfg.Item and not Inv:RemoveItem(src, cfg.Item, 1, nil, 'cooking-campfire-place') then
-        return notify(src, locale('campfire_need_item'):format((itemInfo(cfg.Item))), 'error')
+        return notify(src, locale('campfire_need_item', (itemInfo(cfg.Item))), 'error')
     end
-    if cfg.Item then TriggerClientEvent('rsg-inventory:client:ItemBox', src, RSGCore.Shared.Items[cfg.Item], 'remove', 1) end
 
     placing[cid] = true
     local id = MySQL.insert.await('INSERT INTO rsg_cooking_stations (citizenid, world, stype, x, y, z, heading, hopper, output) VALUES (?, 0, ?, ?, ?, ?, ?, ?, 0)',

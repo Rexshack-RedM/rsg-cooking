@@ -1,4 +1,4 @@
-lib.locale()
+local RSGCore = exports['rsg-core']:GetCoreObject()
 
 local Stations = {}  -- [id] = public data
 local Objects  = {}  -- [id] = spawned campfire entity
@@ -6,6 +6,12 @@ local WorldObj = {}  -- [id] = map stove entity (never deleted by us)
 local Fx       = {}  -- [id] = { particle handles }
 local uiOpen   = nil -- station id while the NUI is open
 local uiReady  = false
+local opening  = false -- guards double clicks while the state callback is in flight
+
+local function loadModel(model)
+    pcall(RSGCore.Functions.RequestModel, model, 5000)
+    return HasModelLoaded(model)
+end
 
 ---------------------------------
 -- particle effects while cooking
@@ -45,12 +51,13 @@ end
 -- campfire props
 ---------------------------------
 local openStationMenu, closeUi
+local placing = false
 
 local function despawnCampfire(id)
     stopFx(id)
     local obj = Objects[id]
     if obj and DoesEntityExist(obj) then
-        exports.ox_target:removeLocalEntity(obj)
+        exports['rsg-target']:removeLocalEntity(obj)
         DeleteObject(obj)
     end
     Objects[id] = nil
@@ -58,7 +65,7 @@ end
 
 local function spawnCampfire(s)
     if Objects[s.id] then return end
-    if not lib.requestModel(Config.Campfire.Model, 5000) then return end
+    if not loadModel(Config.Campfire.Model) then return end
     if not Stations[s.id] or Objects[s.id] then return end
     local obj = CreateObject(Config.Campfire.Model, s.coords.x, s.coords.y, s.coords.z, false, false, false)
     SetModelAsNoLongerNeeded(Config.Campfire.Model)
@@ -68,7 +75,7 @@ local function spawnCampfire(s)
     SetEntityInvincible(obj, true)
     Objects[s.id] = obj
 
-    exports.ox_target:addLocalEntity(obj, {
+    exports['rsg-target']:addLocalEntity(obj, {
         {
             name = 'rsg_cooking_campfire_' .. s.id,
             icon = 'fa-solid fa-fire',
@@ -87,7 +94,7 @@ local function findStoveProp(coords)
 end
 
 local function refreshNearby()
-    local pos = GetEntityCoords(cache.ped)
+    local pos = GetEntityCoords(PlayerPedId())
     for id, s in pairs(Stations) do
         local near = #(pos - s.coords) <= Config.SpawnDist
         if s.world then
@@ -130,7 +137,7 @@ local function clearAll()
 end
 
 local function loadStations()
-    local list = lib.callback.await('rsg-cooking:server:getStations', false)
+    local list = RSGCore.Functions.AwaitCallback('rsg-cooking:server:getStations', 10000)
     clearAll()
     for _, s in ipairs(list or {}) do Stations[s.id] = s end
     refreshNearby()
@@ -149,9 +156,10 @@ end)
 AddEventHandler('onResourceStop', function(res)
     if res ~= GetCurrentResourceName() then return end
     streaming = false
+    if placing then placing = false exports['rsg-core']:HideText() end
     closeUi()
     clearAll()
-    if Config.WorldStations.enabled then exports.ox_target:removeModel(Config.WorldStations.models, 'rsg_cooking_stove') end
+    if Config.WorldStations.enabled then exports['rsg-target']:removeModel(Config.WorldStations.models, 'rsg_cooking_stove') end
 end)
 
 RegisterNetEvent('rsg-cooking:client:syncStation', function(s)
@@ -160,7 +168,7 @@ RegisterNetEvent('rsg-cooking:client:syncStation', function(s)
         updateFx(s.id)
     elseif s.world then
         refreshNearby()
-    elseif #(GetEntityCoords(cache.ped) - s.coords) <= Config.SpawnDist then
+    elseif #(GetEntityCoords(PlayerPedId()) - s.coords) <= Config.SpawnDist then
         spawnCampfire(s)
         updateFx(s.id)
     end
@@ -193,15 +201,17 @@ closeUi = function()
 end
 
 openStationMenu = function(id)
-    if uiOpen then return end
-    local state = lib.callback.await('rsg-cooking:server:getState', false, id)
-    if not state then return end
+    if uiOpen or opening or placing then return end
+    opening = true
+    local state = RSGCore.Functions.AwaitCallback('rsg-cooking:server:getState', 5000, id)
+    opening = false
+    if not state or uiOpen then return end
     uiOpen = id
 
     local strings = {}
     for _, k in ipairs(UiLocale) do strings[k] = locale(k) end
     strings.ui_title = locale('station_' .. (state.stype or 'stove'))
-    Wait(150) -- let ox_target finish closing and release its own focus first
+    Wait(150) -- let rsg-target finish closing and release its own focus first
     if uiOpen ~= id then return end
     SendNUIMessage({ action = 'open', state = state, locale = strings, imagePath = Config.ImagePath })
     SetTimeout(2000, function()
@@ -218,14 +228,14 @@ openStationMenu = function(id)
         while uiOpen == id do
             Wait(500)
             ticks = ticks + 1
-            local ped = cache.ped
+            local ped = PlayerPedId()
             local s = Stations[id]
             if not s or IsEntityDead(ped) or #(GetEntityCoords(ped) - s.coords) > Config.InteractDist then
                 closeUi()
                 break
             end
             if ticks % 6 == 0 then
-                local st = lib.callback.await('rsg-cooking:server:getState', false, id)
+                local st = RSGCore.Functions.AwaitCallback('rsg-cooking:server:getState', 5000, id)
                 if uiOpen == id and st then SendNUIMessage({ action = 'update', state = st }) end
             end
         end
@@ -254,7 +264,7 @@ end)
 
 RegisterNUICallback('action', function(data, cb)
     if not uiOpen then return cb('ok') end
-    local state = lib.callback.await('rsg-cooking:server:action', false, uiOpen, data.action, data.data)
+    local state = RSGCore.Functions.AwaitCallback('rsg-cooking:server:action', 5000, uiOpen, data.action, data.data)
     if state then
         SendNUIMessage({ action = 'update', state = state })
     elseif data.action == 'pickup' then
@@ -274,7 +284,7 @@ end, false)
 -- world stations
 ---------------------------------
 local function openWorld(coords, stype, entity)
-    local s = lib.callback.await('rsg-cooking:server:getWorldStation', false, coords, stype)
+    local s = RSGCore.Functions.AwaitCallback('rsg-cooking:server:getWorldStation', 5000, coords, stype)
     if not s then return end
     Stations[s.id] = s
     if entity then WorldObj[s.id] = entity end
@@ -283,7 +293,7 @@ local function openWorld(coords, stype, entity)
 end
 
 if Config.WorldStations.enabled then
-    exports.ox_target:addModel(Config.WorldStations.models, {
+    exports['rsg-target']:addModel(Config.WorldStations.models, {
         {
             name = 'rsg_cooking_stove',
             icon = 'fa-solid fa-fire-burner',
@@ -315,7 +325,6 @@ local KEY_PLACE  = 0xC7B5340A -- ENTER
 local KEY_CANCEL = 0x156F7119 -- BACKSPACE
 local KEY_ROT_L  = 0xA65EBAB4 -- LEFT ARROW
 local KEY_ROT_R  = 0xDEB34313 -- RIGHT ARROW
-local placing = false
 
 local function rotToDir(rot)
     local z, x = math.rad(rot.z), math.rad(rot.x)
@@ -332,14 +341,14 @@ local function cameraRaycast(ignore, dist)
 end
 
 local function campNotify(desc, ntype)
-    lib.notify({ title = locale('station_campfire'), description = desc, type = ntype or 'inform', duration = 4000 })
+    RSGCore.Functions.Notify({ title = locale('station_campfire'), description = desc, type = ntype or 'inform', duration = 4000 })
 end
 
 local function startPlacement()
     local cfg = Config.Campfire
-    if not lib.requestModel(cfg.Model, 5000) then placing = false return end
+    if not loadModel(cfg.Model) then placing = false return end
 
-    local ped = cache.ped
+    local ped = PlayerPedId()
     local pc = GetEntityCoords(ped)
     local ghost = CreateObject(cfg.Model, pc.x, pc.y, pc.z, false, false, false)
     SetModelAsNoLongerNeeded(cfg.Model)
@@ -348,7 +357,7 @@ local function startPlacement()
 
     local heading = GetEntityHeading(ped)
     local final
-    lib.showTextUI(locale('campfire_controls'), { position = 'left-center' })
+    exports['rsg-core']:DrawText(locale('campfire_controls'), 'left')
 
     while placing do
         Wait(0)
@@ -389,10 +398,10 @@ local function startPlacement()
     end
 
     DeleteEntity(ghost)
-    lib.hideTextUI()
+    exports['rsg-core']:HideText()
     if not final then return end
 
-    if lib.progressBar({
+    if RSGCore.Functions.ProgressBar({
         duration = cfg.SetupTime,
         label = locale('campfire_setting_up'),
         useWhileDead = false,
@@ -406,7 +415,7 @@ local function startPlacement()
 end
 
 local function tryStartPlacement()
-    if placing or uiOpen or LocalPlayer.state.inv_busy or IsEntityDead(cache.ped) then return end
+    if placing or uiOpen or LocalPlayer.state.inv_busy or IsEntityDead(PlayerPedId()) then return end
     placing = true
     CreateThread(startPlacement)
 end

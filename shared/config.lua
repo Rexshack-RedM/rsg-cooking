@@ -26,7 +26,7 @@ Config.StationTypes = {
 Config.WorldStations = {
     enabled  = true,
     private  = true,
-    distance = 2.0, -- ox_target distance
+    distance = 2.0, -- rsg-target distance
     models   = {
         `p_stove01x`,
         `p_stove04x`,

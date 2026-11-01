@@ -30,7 +30,7 @@ Recipes use `types` to choose where they can be cooked (`'all'` or e.g. `{ 'stov
 1. Put `rsg-cooking` in your `resources` folder.
 2. Items: add `installation/shared_items.lua` to `rsg-core/shared/items.lua` and copy `installation/images/*.png` to `rsg-inventory/html/images/`.
 3. Database: the `rsg_cooking_stations` table is created automatically (or run `installation/rsg-cooking.sql`). The old `rsg_cooking_campfires` table is no longer used.
-4. `ensure rsg-cooking` after ox_lib, oxmysql, rsg-core, ox_target and rsg-inventory.
+4. `ensure rsg-cooking` after oxmysql, rsg-core, rsg-inventory and rsg-target. ox_lib is **not** required (locales, notify, callbacks, progress bar and text UI all come from rsg-core).
 5. Webhooks live in `server/sv_config.lua` (server only, the URLs are never sent to clients).
 
 ---
@@ -74,6 +74,19 @@ exports['rsg-cooking']:AddCustomRecipe({ key = 'x', category = 'Meals', level = 
 ## Security notes
 - All items, fuel, xp and food are handled on the server: the client only sends which action it wants, and the server checks distance, ownership, level, job, amounts and inventory space every time.
 - Stove props are map objects the server can't see, so a modded client could open a "stove" pot anywhere. To limit this, each character keeps at most **one unused pot**, and unused pots are deleted on restart.
+
+---
+
+## Changelog
+
+### 3.2.0
+- Removed the ox_lib dependency: locales via `@rsg-core/shared/locale.lua`, rsg-core notify, callbacks, `ProgressBar`, `DrawText`/`HideText` and `RequestModel`
+- Switched targeting from ox_target to `rsg-target`
+- Fixed double item popups (rsg-inventory `AddItem`/`RemoveItem` already show the ItemBox)
+- Fixed the UI opening twice on a fast double click
+- Placement text UI is now hidden if the resource stops mid placement
+- Added a server cooldown on campfire placement
+- Minor clean-up (locale args, fuel bar logic, escaped NUI attributes)
 
 ---
 
