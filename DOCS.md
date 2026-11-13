@@ -98,4 +98,4 @@ The server validates distance, ownership, pantry contents, fuel and level for ev
 | Can't change recipe | Empty the pantry, batch and tray first |
 | Campfire won't place | `MinSpacing`, `MaxPerPlayer`, or the item is missing |
 
-Support: https://buymeacoffee.com/rexshack
+Support the Project : https://rexshack.tebex.store/
