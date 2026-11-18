@@ -18,6 +18,13 @@ local function notify(src, desc, ntype)
     TriggerClientEvent('RSGCore:Client:Notify', src, { title = locale('notify_title'), description = desc, type = ntype or 'inform', duration = 5000 })
 end
 
+-- rsg-skills (optional): mirror XP into the shared skill and read perks, both on the server
+local function skillXP(src, amount, reason)
+    if not Config.Skills.Enabled or not amount or amount <= 0 then return end
+    if GetResourceState('rsg-skills') ~= 'started' then return end
+    exports['rsg-skills']:AddXP(src, Config.Skills.Skill, math.max(1, math.floor(amount * (Config.Skills.XPScale or 1) + 0.5)), reason)
+end
+
 local function needsFuel(s)
     local t = Config.StationTypes[s.stype]
     return not t or t.fuel ~= false
@@ -446,6 +453,7 @@ Actions.collect = function(src, Player, s)
     local xp = amount * (r.xp or Config.XpPerItem)
     if xp > 0 then
         Player.Functions.AddRep(Config.XpName, xp)
+        skillXP(src, xp, 'cooking')
         local after = getLevel(getXp(Player))
         if after > before then
             notify(src, locale('sv_level_up', after), 'success')
@@ -613,6 +621,7 @@ exports('GivePlayerCookingXP', function(src, amount)
     amount = math.floor(tonumber(amount) or 0)
     if not Player or amount <= 0 then return false end
     Player.Functions.AddRep(Config.XpName, amount)
+    skillXP(src, amount, 'cooking (export)')
     return true
 end)
 

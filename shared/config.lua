@@ -224,3 +224,11 @@ function Config.RecipeAllowed(recipe, stationType)
     end
     return false
 end
+
+-- rsg-skills integration (optional). Needs the rsg-skills resource; does nothing when it is not started.
+-- The cooking XP above keeps working; this also awards XP to the shared rsg-skills skill.
+Config.Skills = {
+    Enabled = true,
+    Skill   = 'cooking', -- skill key in rsg-skills
+    XPScale = 1,         -- rsg-skills XP = cooking XP earned x this (rsg-skills applies its own multipliers and cap)
+}

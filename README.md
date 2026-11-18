@@ -79,6 +79,9 @@ exports['rsg-cooking']:AddCustomRecipe({ key = 'x', category = 'Meals', level = 
 
 ## Changelog
 
+**3.3.0**
+- Optional rsg-skills integration: cooking XP mirrored to the `cooking` skill (`Config.Skills`).
+
 ### 3.2.0
 - Removed the ox_lib dependency: locales via `@rsg-core/shared/locale.lua`, rsg-core notify, callbacks, `ProgressBar`, `DrawText`/`HideText` and `RequestModel`
 - Switched targeting from ox_target to `rsg-target`
@@ -98,3 +101,8 @@ exports['rsg-cooking']:AddCustomRecipe({ key = 'x', category = 'Meals', level = 
 
 ## Support
 If you enjoy this script, consider supporting development: https://buymeacoffee.com/rexshack
+
+## rsg-skills integration
+
+Optional. With `rsg-skills` started, cooking XP is also awarded to the shared `cooking` skill (`Config.Skills.XPScale` times the XP earned). Cooking levels and recipe gates keep working as before. Set `Config.Skills.Enabled = false` to turn it off.
+

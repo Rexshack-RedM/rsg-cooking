@@ -98,4 +98,9 @@ The server validates distance, ownership, pantry contents, fuel and level for ev
 | Can't change recipe | Empty the pantry, batch and tray first |
 | Campfire won't place | `MinSpacing`, `MaxPerPlayer`, or the item is missing |
 
+## rsg-skills integration
+
+`Config.Skills = { Enabled, Skill, XPScale }`. When food is collected (`rsg-cooking` collect callback) the server calls `AddXP(src, 'cooking', xp * XPScale, 'cooking')` next to the existing `AddRep`. `GivePlayerCookingXP` mirrors its XP the same way. Recipe level gates still use the rep value (`Config.XpName`). Skipped when rsg-skills is not started.
+
+
 Support the Project : https://rexshack.tebex.store/
