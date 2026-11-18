@@ -104,3 +104,134 @@ The server validates distance, ownership, pantry contents, fuel and level for ev
 
 
 Support the Project : https://rexshack.tebex.store/
+
+<!-- BEGIN AUTO-REFERENCE (generated from the code; re-run the generator instead of editing by hand) -->
+
+## Technical reference
+
+Generated from the source of **rsg-cooking 3.3.0**. Names, arguments and defaults below are read straight from the code.
+
+### Dependencies
+
+`rsg-core`, `rsg-inventory`, `rsg-target`, `oxmysql`
+
+### Database
+
+Tables: `rsg_cooking_stations`.
+
+Tables are created automatically on start while `Config.AutoDatabase = true` (default). Nothing is ever dropped or overwritten.
+For a manual install set `Config.AutoDatabase = false` and import `installation/rsg-cooking.sql` once.
+
+```lua
+-- shared/config.lua
+Config.AutoDatabase = true -- false = import the SQL file yourself
+```
+
+### Configuration
+
+| Option | Default | Notes |
+|---|---|---|
+| `Config.AutoDatabase` | `true` | build the database tables automatically on start (set false and import the SQL file for a manual install) |
+| `Config.InteractDist` | `3.0` | server side max distance for actions |
+| `Config.SpawnDist` | `120.0` | placed campfires only spawn as props within this distance |
+| `Config.MaxBatches` | `10` | the pantry holds this many batches worth of each ingredient |
+| `Config.OutputCap` | `100` | max items the serving tray can hold before cooking stops |
+| `Config.TickInterval` | `15` | seconds between server cooking ticks |
+| `Config.ImagePath` | `'nui://rsg-inventory/html/images/'` |  |
+| `Config.StationTypes` | `table` |  |
+| `Config.WorldStations` | `table` | private = false -> one shared pot per stove, like rsg-moonshine world stills |
+| `Config.Campfire` | `table` |  |
+| `Config.Command` | `'setupcampfire'` |  |
+| `Config.Item` | `'campfire'` |  |
+| `Config.ReturnItem` | `true` |  |
+| `Config.Model` | ``p_campfirecombined01x`` |  |
+| `Config.PlaceDistance` | `5.0` |  |
+| `Config.MinSpacing` | `3.0` |  |
+| `Config.MaxPerPlayer` | `1` |  |
+| `Config.SetupTime` | `5000` |  |
+| `Config.OwnerOnly` | `false` |  |
+| `Config.Fuels` | `table` |  |
+| `Config.MaxFuel` | `3600` | max seconds of fuel the firebox can hold |
+| `Config.CookFx` | `table` | optional particle effects on a station while it is cooking (offsets relative to the prop) |
+| `Config.XpName` | `'cooking'` |  |
+| `Config.XpPerItem` | `1` | xp for each item collected (recipes can override with xp) |
+| `Config.Levels` | `{ 0, 10, 50, 150, 400, 1000 }` | total xp needed to reach each level (index = level) |
+| `Config.Recipes` | `table` |  |
+| `Config.Skills` | `table` | The cooking XP above keeps working; this also awards XP to the shared rsg-skills skill. |
+| `Config.Enabled` | `true` |  |
+| `Config.Skill` | `'cooking'` |  |
+| `Config.XPScale` | `1` |  |
+
+### Exports
+
+**Server**
+
+| Export | Arguments | File |
+|---|---|---|
+| `GetPlayerCookingXP` | `src` | `server/server.lua` |
+| `GetPlayerCookingLevel` | `src` | `server/server.lua` |
+| `GivePlayerCookingXP` | `src, amount` | `server/server.lua` |
+| `GetCookingRecipes` | `` | `server/server.lua` |
+| `CanCookItem` | `itemName` | `server/server.lua` |
+| `AddCustomRecipe` | `recipe` | `server/server.lua` |
+
+**Client**
+
+| Export | Arguments | File |
+|---|---|---|
+| `GetCookingRecipes` | `category` | `client/client.lua` |
+| `GetRecipesByCookingType` | `stype` | `client/client.lua` |
+
+```lua
+-- example
+local result = exports['rsg-cooking']:GetPlayerCookingXP(src)
+```
+
+### Callbacks
+
+| Callback | Side | Arguments | File |
+|---|---|---|---|
+| `rsg-cooking:server:getStations` | server | `_, cb` | `server/server.lua` |
+| `rsg-cooking:server:getState` | server | `src, cb, id` | `server/server.lua` |
+| `rsg-cooking:server:action` | server | `src, cb, id, action, data` | `server/server.lua` |
+| `rsg-cooking:server:getWorldStation` | server | `src, cb, coords, stype` | `server/server.lua` |
+
+```lua
+-- client side
+RSGCore.Functions.TriggerCallback('rsg-cooking:server:getStations', function(result)
+    -- use result
+end)
+```
+
+### Events
+
+Server events can be fired by any client, so every handler re-validates the player, the arguments and any permission, distance or cooldown on the server. Never add a reward to a handler without those checks.
+
+| Event | Side | Arguments | File |
+|---|---|---|---|
+| `RSGCore:Client:OnPlayerLoaded` | client | `` | `client/client.lua` |
+| `RSGCore:Client:OnPlayerUnload` | client | `` | `client/client.lua` |
+| `rsg-cooking:client:syncStation` | client | `s` | `client/client.lua` |
+| `rsg-cooking:client:removeStation` | client | `id` | `client/client.lua` |
+| `rsg-cooking:client:placeCampfire` | client | `` | `client/client.lua` |
+| `rsg-cooking:server:requestCampfire` | server | `` | `server/server.lua` |
+| `rsg-cooking:server:placeCampfire` | server | `coords, heading` | `server/server.lua` |
+
+```lua
+-- from a client script
+TriggerServerEvent('rsg-cooking:server:requestCampfire')
+-- from a server script
+TriggerClientEvent('RSGCore:Client:OnPlayerLoaded', source)
+```
+
+### Commands
+
+| Command | Notes | File |
+|---|---|---|
+| `/cooking_unfocus` |  | `client/client.lua` |
+
+### Locales
+
+Language files in `locales/`: `de`, `el`, `en`, `es`, `fr`, `ja`, `nl`, `pl`, `pt-br`, `ro`. Set the language with `setr rsg:locale "en"`.
+
+<!-- END AUTO-REFERENCE -->

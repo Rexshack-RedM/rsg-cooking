@@ -1,4 +1,6 @@
 Config = {}
+-- build the database tables automatically on start (set false and import the SQL file for a manual install)
+Config.AutoDatabase = true
 
 ---------------------------------
 -- general

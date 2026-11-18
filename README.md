@@ -106,3 +106,6 @@ If you enjoy this script, consider supporting development: https://buymeacoffee.
 
 Optional. With `rsg-skills` started, cooking XP is also awarded to the shared `cooking` skill (`Config.Skills.XPScale` times the XP earned). Cooking levels and recipe gates keep working as before. Set `Config.Skills.Enabled = false` to turn it off.
 
+## Database
+
+Tables (`rsg_cooking_stations`) are created automatically on first start while `Config.AutoDatabase = true` (default); the database user needs `CREATE` permission. To install manually, set `Config.AutoDatabase = false` in the config and import `installation/rsg-cooking.sql` once.
