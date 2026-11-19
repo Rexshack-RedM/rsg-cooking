@@ -22,7 +22,7 @@
 | `html/` | NUI (same style as rsg-moonshine) |
 | `installation/rsg-cooking.sql` | Manual database install |
 | `installation/shared_items.lua` | Items to add to your items file |
-| `locales/*.json` | en, de, el, es, fr, ja, nl, pl, pt-br, ro |
+| `locales/*.json` | en, de, el, es, fr, ja, nl, pl, pt-br, ro, ru |
 
 ## 2. How it works
 Works the same way as rsg-moonshine.
@@ -232,6 +232,6 @@ TriggerClientEvent('RSGCore:Client:OnPlayerLoaded', source)
 
 ### Locales
 
-Language files in `locales/`: `de`, `el`, `en`, `es`, `fr`, `ja`, `nl`, `pl`, `pt-br`, `ro`. Set the language with `setr rsg:locale "en"`.
+Language files in `locales/`: `de`, `el`, `en`, `es`, `fr`, `ja`, `nl`, `pl`, `pt-br`, `ro`, `ru`. Set the language with `setr rsg:locale "en"`.
 
 <!-- END AUTO-REFERENCE -->
